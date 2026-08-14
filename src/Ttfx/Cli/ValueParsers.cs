@@ -318,6 +318,9 @@ public static class ValueParsers
 
     public static object ParseI64Object(string s) => ParseI64(s);
 
+    /// <summary>common.rs parse_positive_int: alias of parse_gradient_steps.</summary>
+    public static object ParseCommonPositiveInt(string s) => ParseGradientSteps(s);
+
     /// <summary>common.rs parse_gradient_steps: int &gt; 0.</summary>
     public static object ParseGradientSteps(string s)
     {
