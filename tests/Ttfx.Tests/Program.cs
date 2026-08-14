@@ -19,6 +19,9 @@ internal static class Program
         tests.AddRange(PyCompatTests.All());
         tests.AddRange(RngVectors.All());
         tests.AddRange(EasingGeometryGoldens.All());
+        tests.AddRange(EngineTraces.All());
+        tests.AddRange(TerminalGroupingTests.All());
+        tests.AddRange(TickMachineryTests.All());
 
         foreach (TestCase test in tests)
         {

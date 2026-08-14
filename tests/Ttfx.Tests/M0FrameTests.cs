@@ -5,6 +5,7 @@ using System.IO;
 using System.Text;
 using Ttfx.Engine;
 using Ttfx.Utils;
+using Path = System.IO.Path;
 
 namespace Ttfx.Tests;
 

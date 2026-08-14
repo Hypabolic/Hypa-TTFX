@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Ttfx.Utils;
 
 namespace Ttfx.Engine;
@@ -33,7 +34,7 @@ public sealed class EffectCharacter
     /// <summary>Python-compatible allocation id; canonical ordering key.</summary>
     public uint CharacterId { get; }
 
-    public string InputSymbol { get; }
+    public string InputSymbol { get; set; }
 
     public Coord InputCoord { get; set; }
 
@@ -48,13 +49,32 @@ public sealed class EffectCharacter
 
     public Motion Motion { get; }
 
+    public EventHandler EventHandler { get; } = new EventHandler();
+
     public long Layer { get; set; }
 
     public bool IsFillCharacter { get; set; }
 
     public bool UsesInputPreexistingColors { get; set; }
 
+    /// <summary>
+    /// Spanning-tree links, kept sorted by <c>CharacterId</c> (plan.md §4.3).
+    /// </summary>
+    public List<CharId> Links { get; } = new List<CharId>();
+
     public Neighbors Neighbors { get; set; }
+
+    /// <summary>
+    /// EffectCharacter.is_active: active while the animation's active scene is
+    /// incomplete OR motion has an active path. Note looping scenes report
+    /// complete, so loop-only characters read as inactive (faithful quirk).
+    /// </summary>
+    public bool IsActive()
+    {
+        // Movement is a null check; scene completion is a map lookup. Same
+        // answer either way, so ask the cheap question first.
+        return !Motion.MovementIsComplete() || !Animation.ActiveSceneIsComplete();
+    }
 
     public EffectCharacter(uint characterId, string symbol, long inputColumn, long inputRow)
     {

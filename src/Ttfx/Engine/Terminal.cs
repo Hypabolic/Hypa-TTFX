@@ -1,6 +1,7 @@
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Linq;
 using Ttfx.Cli;
 using Ttfx.Utils;
 
@@ -49,6 +50,51 @@ public sealed class TerminalConfig
             NoRestoreCursor = root.NoRestoreCursor,
         };
     }
+}
+
+/// <summary>CharacterSort (argutils.CharacterSort).</summary>
+public enum CharacterSort
+{
+    Random,
+    TopToBottomLeftToRight,
+    BottomToTopRightToLeft,
+    BottomToTopLeftToRight,
+    TopToBottomRightToLeft,
+    OutsideRowToMiddle,
+    MiddleRowToOutside,
+}
+
+/// <summary>CharacterGroup (argutils.CharacterGroup).</summary>
+public enum CharacterGroup
+{
+    ColumnLeftToRight,
+    ColumnRightToLeft,
+    RowTopToBottom,
+    RowBottomToTop,
+    DiagonalBottomLeftToTopRight,
+    DiagonalTopRightToBottomLeft,
+    DiagonalTopLeftToBottomRight,
+    DiagonalBottomRightToTopLeft,
+    CenterToOutside,
+    OutsideToCenter,
+}
+
+/// <summary>ColorSort (argutils.ColorSort).</summary>
+public enum ColorSort
+{
+    LeastToMost,
+    MostToLeast,
+    Random,
+}
+
+/// <summary>Which character populations to include in a query (the four bool kwargs).</summary>
+public readonly record struct CharacterFilter(
+    bool InputChars,
+    bool InnerFillChars,
+    bool OuterFillChars,
+    bool AddedChars)
+{
+    public static CharacterFilter Default { get; } = new CharacterFilter(true, false, false, false);
 }
 
 /// <summary>
@@ -657,5 +703,356 @@ public sealed class Terminal
         }
 
         return canvas.AnchorText(arena, inputCharacters, config.AnchorText);
+    }
+
+    /// <summary>
+    /// Terminal.add_character: registered only in added_characters, not in
+    /// character_by_input_coord or the neighbor map.
+    /// </summary>
+    public CharId AddCharacter(string symbol, Coord coord)
+    {
+        var ch = new EffectCharacter(NextCharacterId, symbol, coord.Column, coord.Row);
+        ch.Animation.NoColor = Config.NoColor;
+        ch.Animation.UseXtermColors = Config.XtermColors;
+        ch.Animation.ExistingColorHandling = Config.ExistingColorHandling;
+        ch.UsesInputPreexistingColors = false;
+        NextCharacterId += 1;
+        var id = new CharId((uint)Arena.Count);
+        Arena.Add(ch);
+        AddedCharacters.Add(id);
+        return id;
+    }
+
+    public CharId? GetCharacterByInputCoord(Coord coord)
+    {
+        return CharacterByInputCoord.TryGetValue(coord, out CharId id) ? id : null;
+    }
+
+    /// <summary>
+    /// Terminal.get_input_colors. Equal-count ties keep insertion order
+    /// (Python's stable sort over dict keys).
+    /// </summary>
+    public List<Color> GetInputColors(Rng rng, ColorSort sort)
+    {
+        var colors = new List<(Color Color, long Count)>(InputColorsFrequency.Entries);
+        switch (sort)
+        {
+            case ColorSort.MostToLeast:
+                // Python: sorted(keys, key=count, reverse=True) — reverse of a
+                // stable ascending sort reverses tie order too; replicate by
+                // sorting descending with stable tie order = insertion order.
+                colors = colors.OrderByDescending(c => c.Count).ToList();
+                break;
+            case ColorSort.LeastToMost:
+                colors = colors.OrderBy(c => c.Count).ToList();
+                break;
+            case ColorSort.Random:
+                rng.Shuffle(colors);
+                break;
+        }
+
+        var result = new List<Color>(colors.Count);
+        int count = colors.Count;
+        for (int i = 0; i < count; i++)
+        {
+            result.Add(colors[i].Color);
+        }
+
+        return result;
+    }
+
+    public List<CharId> CollectCharacters(CharacterFilter filter)
+    {
+        int capacity = (filter.InputChars ? InputCharacters.Count : 0)
+            + (filter.InnerFillChars ? InnerFillCharacters.Count : 0)
+            + (filter.OuterFillChars ? OuterFillCharacters.Count : 0)
+            + (filter.AddedChars ? AddedCharacters.Count : 0);
+        var all = new List<CharId>(capacity);
+        if (filter.InputChars)
+        {
+            all.AddRange(InputCharacters);
+        }
+
+        if (filter.InnerFillChars)
+        {
+            all.AddRange(InnerFillCharacters);
+        }
+
+        if (filter.OuterFillChars)
+        {
+            all.AddRange(OuterFillCharacters);
+        }
+
+        if (filter.AddedChars)
+        {
+            all.AddRange(AddedCharacters);
+        }
+
+        return all;
+    }
+
+    /// <summary>Terminal.get_characters with all sort variants.</summary>
+    public List<CharId> GetCharacters(Rng rng, CharacterFilter filter, CharacterSort sort)
+    {
+        List<CharId> all = CollectCharacters(filter);
+        // default sort: (-row, column), stable
+        all = all.OrderBy(id =>
+        {
+            Coord c = Arena[(int)id.Value].InputCoord;
+            return (-c.Row, c.Column);
+        }).ToList();
+        switch (sort)
+        {
+            case CharacterSort.Random:
+                rng.Shuffle(all);
+                break;
+            case CharacterSort.TopToBottomLeftToRight:
+                break;
+            case CharacterSort.BottomToTopRightToLeft:
+                all.Reverse();
+                break;
+            case CharacterSort.BottomToTopLeftToRight:
+            case CharacterSort.TopToBottomRightToLeft:
+                all = all.OrderBy(id =>
+                {
+                    Coord c = Arena[(int)id.Value].InputCoord;
+                    return (c.Row, c.Column);
+                }).ToList();
+                if (sort == CharacterSort.TopToBottomRightToLeft)
+                {
+                    all.Reverse();
+                }
+
+                break;
+            case CharacterSort.OutsideRowToMiddle:
+            case CharacterSort.MiddleRowToOutside:
+            {
+                // upstream: alternate pop(0)/pop(-1) (terminal.rs:409)
+                var deque = new LinkedList<CharId>(all);
+                var interleaved = new List<CharId>(deque.Count);
+                bool fromFront = true;
+                while (deque.Count > 0)
+                {
+                    if (fromFront)
+                    {
+                        interleaved.Add(deque.First!.Value);
+                        deque.RemoveFirst();
+                    }
+                    else
+                    {
+                        interleaved.Add(deque.Last!.Value);
+                        deque.RemoveLast();
+                    }
+
+                    fromFront = !fromFront;
+                }
+
+                all = interleaved;
+                if (sort == CharacterSort.MiddleRowToOutside)
+                {
+                    all.Reverse();
+                }
+
+                break;
+            }
+        }
+
+        return all;
+    }
+
+    /// <summary>Terminal.get_characters_grouped with all grouping variants.</summary>
+    public List<List<CharId>> GetCharactersGrouped(CharacterFilter filter, CharacterGroup grouping)
+    {
+        List<CharId> all = CollectCharacters(filter);
+        all = all.OrderBy(id =>
+        {
+            Coord c = Arena[(int)id.Value].InputCoord;
+            return (c.Row, c.Column);
+        }).ToList();
+        Coord CoordOf(CharId id) => Arena[(int)id.Value].InputCoord;
+        switch (grouping)
+        {
+            case CharacterGroup.ColumnLeftToRight:
+            case CharacterGroup.ColumnRightToLeft:
+            {
+                List<List<CharId>> columns = OrderedBuckets(all, 0, Canvas.Right, id => CoordOf(id).Column);
+                if (grouping == CharacterGroup.ColumnRightToLeft)
+                {
+                    columns.Reverse();
+                }
+
+                return columns;
+            }
+            case CharacterGroup.RowBottomToTop:
+            case CharacterGroup.RowTopToBottom:
+            {
+                List<List<CharId>> rows = OrderedBuckets(all, 0, Canvas.Top, id => CoordOf(id).Row);
+                if (grouping == CharacterGroup.RowTopToBottom)
+                {
+                    rows.Reverse();
+                }
+
+                return rows;
+            }
+            case CharacterGroup.DiagonalBottomLeftToTopRight:
+            case CharacterGroup.DiagonalTopRightToBottomLeft:
+            {
+                List<List<CharId>> diagonals = OrderedBuckets(
+                    all,
+                    0,
+                    Canvas.Top + Canvas.Right,
+                    id =>
+                    {
+                        Coord c = CoordOf(id);
+                        return c.Row + c.Column;
+                    });
+                if (grouping == CharacterGroup.DiagonalTopRightToBottomLeft)
+                {
+                    diagonals.Reverse();
+                }
+
+                return diagonals;
+            }
+            case CharacterGroup.DiagonalTopLeftToBottomRight:
+            case CharacterGroup.DiagonalBottomRightToTopLeft:
+            {
+                List<List<CharId>> diagonals = OrderedBuckets(
+                    all,
+                    Canvas.Left - Canvas.Top,
+                    Canvas.Right - Canvas.Bottom,
+                    id =>
+                    {
+                        Coord c = CoordOf(id);
+                        return c.Column - c.Row;
+                    });
+                if (grouping == CharacterGroup.DiagonalBottomRightToTopLeft)
+                {
+                    diagonals.Reverse();
+                }
+
+                return diagonals;
+            }
+            case CharacterGroup.CenterToOutside:
+            case CharacterGroup.OutsideToCenter:
+            {
+                long? maxDistance = null;
+                int allCount = all.Count;
+                for (int i = 0; i < allCount; i++)
+                {
+                    Coord c = CoordOf(all[i]);
+                    long distance = Math.Abs(c.Column - Canvas.TextCenter.Column)
+                        + Math.Abs(c.Row - Canvas.TextCenter.Row);
+                    if (maxDistance is null || distance > maxDistance.Value)
+                    {
+                        maxDistance = distance;
+                    }
+                }
+
+                int denseLimit = Math.Max(all.Count * 4, 256);
+                List<List<CharId>> groups;
+                if (maxDistance is long distanceValue
+                    && distanceValue >= 0
+                    && distanceValue <= denseLimit)
+                {
+                    groups = OrderedBuckets(all, 0, distanceValue, id =>
+                    {
+                        Coord c = CoordOf(id);
+                        return Math.Abs(c.Column - Canvas.TextCenter.Column)
+                            + Math.Abs(c.Row - Canvas.TextCenter.Row);
+                    });
+                }
+                else
+                {
+                    // Out-of-canvas added characters can have sparse, arbitrarily
+                    // large distances; avoid allocating through the largest key.
+                    var distances = new Dictionary<long, List<CharId>>();
+                    for (int i = 0; i < allCount; i++)
+                    {
+                        CharId id = all[i];
+                        Coord c = CoordOf(id);
+                        long distance = Math.Abs(c.Column - Canvas.TextCenter.Column)
+                            + Math.Abs(c.Row - Canvas.TextCenter.Row);
+                        if (!distances.TryGetValue(distance, out List<CharId>? bucket))
+                        {
+                            bucket = new List<CharId>();
+                            distances[distance] = bucket;
+                        }
+
+                        bucket.Add(id);
+                    }
+
+                    groups = distances
+                        .OrderBy(pair => pair.Key)
+                        .Select(pair => pair.Value)
+                        .ToList();
+                }
+
+                if (grouping == CharacterGroup.OutsideToCenter)
+                {
+                    groups.Reverse();
+                }
+
+                return groups;
+            }
+            default:
+                throw new EngineInvariantException($"unknown grouping {grouping}");
+        }
+    }
+
+    private static List<List<CharId>> OrderedBuckets(
+        List<CharId> characters,
+        long firstKey,
+        long lastKey,
+        Func<CharId, long> key)
+    {
+        if (firstKey > lastKey)
+        {
+            return new List<List<CharId>>();
+        }
+
+        long span;
+        try
+        {
+            span = checked(lastKey - firstKey + 1);
+        }
+        catch (OverflowException)
+        {
+            throw new EngineInvariantException("terminal canvas is too large");
+        }
+
+        if (span > int.MaxValue)
+        {
+            throw new EngineInvariantException("terminal canvas is too large");
+        }
+
+        int bucketCount = (int)span;
+        int expectedBucketLen = characters.Count / Math.Max(bucketCount, 1);
+        var buckets = new List<List<CharId>>(bucketCount);
+        for (int i = 0; i < bucketCount; i++)
+        {
+            buckets.Add(new List<CharId>(expectedBucketLen));
+        }
+
+        int charCount = characters.Count;
+        for (int i = 0; i < charCount; i++)
+        {
+            CharId id = characters[i];
+            long characterKey = key(id);
+            if (firstKey <= characterKey && characterKey <= lastKey)
+            {
+                buckets[(int)(characterKey - firstKey)].Add(id);
+            }
+        }
+
+        var result = new List<List<CharId>>();
+        for (int i = 0; i < bucketCount; i++)
+        {
+            if (buckets[i].Count > 0)
+            {
+                result.Add(buckets[i]);
+            }
+        }
+
+        return result;
     }
 }

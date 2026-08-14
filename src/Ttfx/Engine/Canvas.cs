@@ -253,4 +253,37 @@ public sealed class Canvas
             && TextBottom <= coord.Row
             && coord.Row <= TextTop;
     }
+
+    public long RandomColumn(Rng rng, bool withinTextBoundary)
+    {
+        return withinTextBoundary
+            ? rng.Randint(TextLeft, TextRight)
+            : rng.Randint(Left, Right);
+    }
+
+    public long RandomRow(Rng rng, bool withinTextBoundary)
+    {
+        return withinTextBoundary
+            ? rng.Randint(TextBottom, TextTop)
+            : rng.Randint(Bottom, Top);
+    }
+
+    /// <summary>
+    /// random_coord: outside_scope picks among four coords exactly one cell past
+    /// an edge — note the RNG call ORDER (above, below, left, right built first,
+    /// then choice) is part of the parity contract.
+    /// </summary>
+    public Coord RandomCoord(Rng rng, bool outsideScope, bool withinTextBoundary)
+    {
+        if (outsideScope)
+        {
+            Coord above = Coord.New(RandomColumn(rng, false), Top + 1);
+            Coord below = Coord.New(RandomColumn(rng, false), Bottom - 1);
+            Coord left = Coord.New(Left - 1, RandomRow(rng, false));
+            Coord right = Coord.New(Right + 1, RandomRow(rng, false));
+            return rng.Choice(new[] { above, below, left, right });
+        }
+
+        return Coord.New(RandomColumn(rng, withinTextBoundary), RandomRow(rng, withinTextBoundary));
+    }
 }

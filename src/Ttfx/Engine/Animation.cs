@@ -1,4 +1,7 @@
+using System;
 using System.Buffers;
+using System.Collections.Generic;
+using System.Globalization;
 using System.Text;
 using Ttfx.Utils;
 
@@ -12,6 +15,12 @@ public enum ExistingColorHandling
     Always,
     Dynamic,
     Ignore,
+}
+
+public enum SyncMetric
+{
+    Distance,
+    Step,
 }
 
 /// <summary>
@@ -35,6 +44,8 @@ public sealed class FormattedSymbol
     }
 
     public byte[] Bytes => _bytes;
+
+    public string AsStr() => Encoding.UTF8.GetString(_bytes);
 
     public void AppendTo(System.Buffers.ArrayBufferWriter<byte> outBuf)
     {
@@ -169,17 +180,369 @@ public sealed class CharacterVisual
 }
 
 /// <summary>
+/// animation.Frame. Frames live in Scene.all_frames (stable storage);
+/// Scene.frames / Scene.played_frames hold indices into it, preserving the
+/// upstream object-identity semantics of frame_index_map.
+/// </summary>
+public sealed class Frame
+{
+    public CharacterVisual CharacterVisual { get; }
+    public long Duration { get; }
+    public long TicksElapsed { get; set; }
+
+    public Frame(CharacterVisual characterVisual, long duration)
+    {
+        CharacterVisual = characterVisual;
+        Duration = duration;
+        TicksElapsed = 0;
+    }
+}
+
+/// <summary>
+/// animation.Scene.
+/// Transcribed from <c>engine/animation.rs</c>.
+/// </summary>
+public sealed class Scene
+{
+    public string SceneId { get; }
+    public bool IsLooping { get; }
+    public SyncMetric? Sync { get; }
+    public Easing? Ease { get; }
+    public bool NoColor { get; }
+    public bool UseXtermColors { get; }
+
+    /// <summary>Stable frame storage; never reordered.</summary>
+    public List<Frame> AllFrames { get; } = new List<Frame>();
+
+    /// <summary>
+    /// Remaining frame queue (indices into all_frames). FIFO: push_back / pop_front
+    /// (<c>animation.rs:226</c>). List so synced-scene indexing (<c>ctx.rs:613</c>)
+    /// and <c>.back()</c> (<c>ctx.rs:594</c>) work.
+    /// </summary>
+    public List<int> Frames { get; } = new List<int>();
+
+    /// <summary>
+    /// Played frames (indices into all_frames). Append-only list;
+    /// <c>reset_scene</c> restores played+remaining in original order.
+    /// </summary>
+    public List<int> PlayedFrames { get; } = new List<int>();
+
+    /// <summary>Tick index -&gt; frame index (upstream frame_index_map).</summary>
+    public List<int> FrameIndexMap { get; } = new List<int>();
+
+    public long EasingTotalSteps { get; set; }
+    public long EasingCurrentStep { get; set; }
+    public ColorPair? PreexistingColors { get; set; }
+    public bool PreexistingBold { get; set; }
+
+    public Scene(
+        string sceneId,
+        bool isLooping,
+        SyncMetric? sync,
+        Easing? ease,
+        bool noColor,
+        bool useXtermColors)
+    {
+        SceneId = sceneId;
+        IsLooping = isLooping;
+        Sync = sync;
+        Ease = ease;
+        NoColor = noColor;
+        UseXtermColors = useXtermColors;
+    }
+
+    public static Scene New(
+        string sceneId,
+        bool isLooping,
+        SyncMetric? sync,
+        Easing? ease,
+        bool noColor,
+        bool useXtermColors) =>
+        new Scene(sceneId, isLooping, sync, ease, noColor, useXtermColors);
+
+    /// <summary>
+    /// Scene._get_color_code. Upstream memoizes into a process-global ClassVar
+    /// dict; the memo is value-transparent so we just recompute.
+    /// </summary>
+    private Ansi.ColorCode? GetColorCode(Color? color)
+    {
+        if (color is null)
+        {
+            return null;
+        }
+
+        if (NoColor)
+        {
+            return null;
+        }
+
+        if (UseXtermColors)
+        {
+            if (color.XtermColor is byte code)
+            {
+                return new Ansi.ColorCode.Xterm(code);
+            }
+
+            return new Ansi.ColorCode.Xterm(Hexterm.HexToXterm(color.RgbColor));
+        }
+
+        return new Ansi.ColorCode.Rgb(color.RgbColor);
+    }
+
+    /// <summary>Scene.add_frame with the preexisting-color/bold overrides.</summary>
+    public void AddFrame(string symbol, long duration, VisualParams parameters)
+    {
+        if (PreexistingColors is ColorPair pre)
+        {
+            parameters.Colors = pre;
+        }
+
+        if (PreexistingBold)
+        {
+            parameters.Bold = true;
+        }
+
+        if (parameters.Colors is ColorPair colors)
+        {
+            parameters.FgColorCode = GetColorCode(colors.FgColor);
+            parameters.BgColorCode = GetColorCode(colors.BgColor);
+        }
+        else
+        {
+            parameters.FgColorCode = null;
+            parameters.BgColorCode = null;
+        }
+
+        if (duration < 1)
+        {
+            throw new EngineException($"Frame duration must be at least 1. Received: {duration}");
+        }
+
+        CharacterVisual visual = CharacterVisual.New(symbol, parameters);
+        int frameIndex = AllFrames.Count;
+        AllFrames.Add(new Frame(visual, duration));
+        Frames.Add(frameIndex);
+        for (long n = 0; n < duration; n++)
+        {
+            FrameIndexMap.Add(frameIndex);
+            EasingTotalSteps += 1;
+        }
+    }
+
+    /// <summary>Scene.activate: first frame's visual, error when empty.</summary>
+    public CharacterVisual Activate()
+    {
+        if (Frames.Count == 0)
+        {
+            throw new EngineException($"Scene {SceneId} has no frames.");
+        }
+
+        return AllFrames[Frames[0]].CharacterVisual;
+    }
+
+    /// <summary>
+    /// Scene.get_next_visual: tick the head frame, retiring it (and looping)
+    /// exactly as upstream.
+    /// </summary>
+    public CharacterVisual GetNextVisual()
+    {
+        int head = Frames[0];
+        CharacterVisual nextVisual = AllFrames[head].CharacterVisual;
+        AllFrames[head].TicksElapsed += 1;
+        if (AllFrames[head].TicksElapsed == AllFrames[head].Duration)
+        {
+            AllFrames[head].TicksElapsed = 0;
+            PlayedFrames.Add(Frames[0]);
+            Frames.RemoveAt(0);
+            if (IsLooping && Frames.Count == 0)
+            {
+                Frames.AddRange(PlayedFrames);
+                PlayedFrames.Clear();
+            }
+        }
+
+        return nextVisual;
+    }
+
+    /// <summary>
+    /// Scene.apply_gradient_to_symbols with the exact cyclic_distribution
+    /// generator semantics (repeat factor + overflow-remainder rule).
+    /// </summary>
+    public void ApplyGradientToSymbols(
+        IReadOnlyList<string> symbols,
+        long duration,
+        Gradient? fgGradient,
+        Gradient? bgGradient)
+    {
+        static List<(T Larger, R Smaller)> CyclicDistribution<T, R>(IReadOnlyList<T> larger, IReadOnlyList<R> smaller)
+        {
+            int repeatFactor = larger.Count / smaller.Count;
+            int overflowCount = larger.Count % smaller.Count;
+            bool overflowUsed = false;
+            int smallerIndex = 0;
+            int currentRepeatFactor = 0;
+            var output = new List<(T, R)>(larger.Count);
+            // Length captured once: cyclic_distribution does not emit (animation.rs:349).
+            int largerCount = larger.Count;
+            for (int i = 0; i < largerCount; i++)
+            {
+                if (currentRepeatFactor >= repeatFactor)
+                {
+                    if (overflowCount > 0)
+                    {
+                        if (overflowUsed)
+                        {
+                            smallerIndex += 1;
+                            currentRepeatFactor = 0;
+                            overflowUsed = false;
+                        }
+                        else
+                        {
+                            overflowUsed = true;
+                            overflowCount -= 1;
+                        }
+                    }
+                    else
+                    {
+                        smallerIndex += 1;
+                        currentRepeatFactor = 0;
+                    }
+                }
+
+                currentRepeatFactor += 1;
+                output.Add((larger[i], smaller[smallerIndex]));
+            }
+
+            return output;
+        }
+
+        bool fgHas = fgGradient is not null && fgGradient.Spectrum.Count > 0;
+        bool bgHas = bgGradient is not null && bgGradient.Spectrum.Count > 0;
+        if (fgGradient is null && bgGradient is null)
+        {
+            throw new EngineException(
+                "Foreground and background gradient are None. At least one gradient must be provided.");
+        }
+
+        if (!fgHas && !bgHas)
+        {
+            throw new EngineException(
+                "Foreground and background gradient are empty. At least one gradient must have at least one color.");
+        }
+
+        // Length captured once: symbol validation does not emit (animation.rs:382).
+        int symbolCount = symbols.Count;
+        for (int i = 0; i < symbolCount; i++)
+        {
+            if (Unicode.RuneCount(symbols[i]) > 1)
+            {
+                throw new EngineException($"Symbol must be a string with a length of 1. Received: `{symbols[i]}`.");
+            }
+        }
+
+        var colorPairs = new List<ColorPair>();
+        if (fgHas && bgHas)
+        {
+            IReadOnlyList<Color> fg = fgGradient!.Spectrum;
+            IReadOnlyList<Color> bg = bgGradient!.Spectrum;
+            if (fg.Count >= bg.Count)
+            {
+                List<(Color F, Color B)> pairs = CyclicDistribution(fg, bg);
+                int pairCount = pairs.Count;
+                for (int i = 0; i < pairCount; i++)
+                {
+                    colorPairs.Add(ColorPair.New(pairs[i].F, pairs[i].B));
+                }
+            }
+            else
+            {
+                List<(Color B, Color F)> pairs = CyclicDistribution(bg, fg);
+                int pairCount = pairs.Count;
+                for (int i = 0; i < pairCount; i++)
+                {
+                    colorPairs.Add(ColorPair.New(pairs[i].F, pairs[i].B));
+                }
+            }
+        }
+        else if (fgHas)
+        {
+            IReadOnlyList<Color> spectrum = fgGradient!.Spectrum;
+            int count = spectrum.Count;
+            for (int i = 0; i < count; i++)
+            {
+                colorPairs.Add(ColorPair.New(spectrum[i], null));
+            }
+        }
+        else
+        {
+            IReadOnlyList<Color> spectrum = bgGradient!.Spectrum;
+            int count = spectrum.Count;
+            for (int i = 0; i < count; i++)
+            {
+                colorPairs.Add(ColorPair.New(null, spectrum[i]));
+            }
+        }
+
+        if (symbols.Count >= colorPairs.Count)
+        {
+            List<(string Symbol, ColorPair Colors)> pairs = CyclicDistribution(symbols, colorPairs);
+            int pairCount = pairs.Count;
+            for (int i = 0; i < pairCount; i++)
+            {
+                AddFrame(pairs[i].Symbol, duration, new VisualParams { Colors = pairs[i].Colors });
+            }
+        }
+        else
+        {
+            List<(ColorPair Colors, string Symbol)> pairs = CyclicDistribution(colorPairs, symbols);
+            int pairCount = pairs.Count;
+            for (int i = 0; i < pairCount; i++)
+            {
+                AddFrame(pairs[i].Symbol, duration, new VisualParams { Colors = pairs[i].Colors });
+            }
+        }
+    }
+
+    /// <summary>
+    /// Scene.reset_scene: restore played + remaining frames in original order
+    /// (played first), zero tick counters and the easing step.
+    /// </summary>
+    public void ResetScene()
+    {
+        // Remaining frames get ticks_elapsed zeroed as they move to played;
+        // already-played frames were zeroed when they retired.
+        var remaining = new List<int>(Frames);
+        Frames.Clear();
+        // Length captured once: reset does not emit (animation.rs:425).
+        int remainingCount = remaining.Count;
+        for (int i = 0; i < remainingCount; i++)
+        {
+            int idx = remaining[i];
+            AllFrames[idx].TicksElapsed = 0;
+            PlayedFrames.Add(idx);
+        }
+
+        Frames.AddRange(PlayedFrames);
+        PlayedFrames.Clear();
+        EasingCurrentStep = 0;
+    }
+}
+
+/// <summary>
 /// engine/animation.py Animation: per-character animation state.
-/// Scene ticking is a later issue; this is state plus SGR / appearance.
+/// Transcribed from <c>engine/animation.rs</c>.
 /// </summary>
 public sealed class Animation
 {
+    public OrderedMap<Scene> Scenes { get; } = new OrderedMap<Scene>();
+    public string? ActiveScene { get; set; }
     public bool UseXtermColors { get; set; }
     public bool NoColor { get; set; }
     public ExistingColorHandling ExistingColorHandling { get; set; }
     public Color? InputFgColor { get; set; }
     public Color? InputBgColor { get; set; }
     public bool InputBold { get; set; }
+    public long ActiveSceneCurrentStep { get; set; }
     public CharacterVisual CurrentCharacterVisual { get; set; }
 
     private Animation(string inputSymbol)
@@ -190,10 +553,70 @@ public sealed class Animation
         InputFgColor = null;
         InputBgColor = null;
         InputBold = false;
+        ActiveSceneCurrentStep = 0;
         CurrentCharacterVisual = CharacterVisual.Plain(inputSymbol);
     }
 
     public static Animation New(string inputSymbol) => new Animation(inputSymbol);
+
+    /// <summary>
+    /// Animation.new_scene: auto-ids are stringified integers probing upward;
+    /// duplicate explicit ids silently overwrite (faithful).
+    /// </summary>
+    public string NewScene(
+        bool isLooping,
+        SyncMetric? sync,
+        Easing? ease,
+        string sceneId,
+        bool usesInputPreexistingColors)
+    {
+        string resolvedId;
+        if (sceneId.Length == 0)
+        {
+            int currentId = Scenes.Count;
+            while (true)
+            {
+                string candidate = currentId.ToString(CultureInfo.InvariantCulture);
+                if (!Scenes.ContainsKey(candidate))
+                {
+                    resolvedId = candidate;
+                    break;
+                }
+
+                currentId += 1;
+            }
+        }
+        else
+        {
+            resolvedId = sceneId;
+        }
+
+        ColorPair? preexistingColors = null;
+        bool preexistingBold = false;
+        if (ExistingColorHandling == ExistingColorHandling.Always && usesInputPreexistingColors)
+        {
+            preexistingColors = ColorPair.New(InputFgColor, InputBgColor);
+            preexistingBold = InputBold;
+        }
+
+        Scene scene = Scene.New(resolvedId, isLooping, sync, ease, NoColor, UseXtermColors);
+        scene.PreexistingColors = preexistingColors;
+        scene.PreexistingBold = preexistingBold;
+        Scenes.Insert(resolvedId, scene);
+        return resolvedId;
+    }
+
+    /// <summary>Animation.active_scene_is_complete: no scene, no remaining frames, or looping.</summary>
+    public bool ActiveSceneIsComplete()
+    {
+        if (ActiveScene is null)
+        {
+            return true;
+        }
+
+        Scene scene = Scenes.Get(ActiveScene) ?? throw new EngineInvariantException("active scene must exist");
+        return scene.Frames.Count == 0 || scene.IsLooping;
+    }
 
     /// <summary>Animation._get_color_code.</summary>
     public Ansi.ColorCode? GetColorCode(Color? color)
