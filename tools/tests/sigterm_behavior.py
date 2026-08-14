@@ -23,10 +23,11 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-BIN = sys.argv[1] if len(sys.argv) > 1 else str(ROOT / "target/release/ttfx")
+BIN = sys.argv[1] if len(sys.argv) > 1 else str(ROOT / "artifacts/ttfx")
 HIDE, SHOW = b"\x1b[?25l", b"\x1b[?25h"
-# Long enough that the signal always lands mid-animation.
-ARGS = ["--frame-rate", "30", "colorshift", "--cycles", "100"]
+# Long enough that the signal always lands mid-animation. wipe is the only
+# implemented effect; 100 easer steps at 30 fps stay alive past HIDE.
+ARGS = ["--frame-rate", "30", "wipe"]
 
 
 def spawn(stdout_pipe: bool):

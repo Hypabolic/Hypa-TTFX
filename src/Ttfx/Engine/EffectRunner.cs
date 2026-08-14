@@ -6,6 +6,19 @@ using System.Text;
 namespace Ttfx.Engine;
 
 /// <summary>
+/// One effect: build() once (upstream iterator __init__/build), then
+/// next_frame() until None (upstream __next__/StopIteration).
+/// Transcribed from <c>engine/effect.rs</c>.
+/// </summary>
+public enum RunOutcome
+{
+    Complete,
+    Interrupted,
+    Terminated,
+    TerminalResized,
+}
+
+/// <summary>
 /// Effect trait run loop (base_effect.py equivalents).
 /// Transcribed from <c>engine/effect.rs</c>.
 /// </summary>
@@ -17,7 +30,7 @@ public static class EffectRunner
     /// </summary>
     public static ulong DumpEffect(IEffect effect, EngineWorld world, ulong? maxFrames)
     {
-        using Stream stdout = Console.OpenStandardOutput();
+        using Stream stdout = StdIo.OpenStdout();
         return DumpEffect(effect, world, maxFrames, stdout, Console.Error);
     }
 
@@ -60,26 +73,47 @@ public static class EffectRunner
 
     /// <summary>
     /// __main__ run loop with terminal_output(): prep canvas, stream frames,
-    /// always restore the cursor (even on error). SIGINT/SIGTERM/SIGWINCH and
-    /// stop_on_resize are issue 0012 — unused here.
+    /// always restore the cursor (even on error — RAII would not run on a raw
+    /// process exit, so this is explicit).
+    ///
+    /// With <paramref name="stopOnResize"/>, a settled terminal resize also ends
+    /// the pass, wiped and parked at the top of the area so the caller can
+    /// rebuild in place.
     /// </summary>
-    public static void RunEffect(IEffect effect, EngineWorld world)
+    public static RunOutcome RunEffect(IEffect effect, EngineWorld world, bool stopOnResize = false)
     {
-        using Stream stdout = Console.OpenStandardOutput();
-        RunEffect(effect, world, stdout);
+        using Stream stdout = StdIo.OpenStdout();
+        return RunEffect(effect, world, stdout, stopOnResize);
     }
 
-    internal static void RunEffect(IEffect effect, EngineWorld world, Stream stdout)
+    internal static RunOutcome RunEffect(
+        IEffect effect,
+        EngineWorld world,
+        Stream stdout,
+        bool stopOnResize = false)
     {
         effect.Build(world);
         world.Terminal.PrepCanvas(stdout);
+        RunOutcome outcome = RunOutcome.Complete;
         try
         {
             while (true)
             {
+                if (RequestedStop(world, stopOnResize) is RunOutcome stop)
+                {
+                    outcome = stop;
+                    break;
+                }
+
                 string? frame = effect.NextFrame(world);
                 if (frame is null)
                 {
+                    break;
+                }
+
+                if (RequestedStop(world, stopOnResize) is RunOutcome stopAfter)
+                {
+                    outcome = stopAfter;
                     break;
                 }
 
@@ -88,8 +122,47 @@ public static class EffectRunner
         }
         finally
         {
-            world.Terminal.RestoreCursor(stdout, "\n");
-            stdout.Flush();
+            if (outcome == RunOutcome.TerminalResized)
+            {
+                // Leave the cursor hidden and parked at the top of the wiped area: the
+                // rebuild redraws in place, and showing the cursor here would strobe it
+                // dozens of times a second through a window drag.
+                world.Terminal.ResetCanvasArea(stdout);
+            }
+            else
+            {
+                world.Terminal.RestoreCursor(stdout, "\n");
+            }
+
+            try
+            {
+                stdout.Flush();
+            }
+            catch (BrokenPipeException)
+            {
+            }
         }
+
+        return outcome;
+    }
+
+    private static RunOutcome? RequestedStop(EngineWorld world, bool stopOnResize)
+    {
+        if (Signals.Interrupted())
+        {
+            return RunOutcome.Interrupted;
+        }
+
+        if (Signals.Terminated())
+        {
+            return RunOutcome.Terminated;
+        }
+
+        if (stopOnResize && world.Terminal.ResizeSettled())
+        {
+            return RunOutcome.TerminalResized;
+        }
+
+        return null;
     }
 }

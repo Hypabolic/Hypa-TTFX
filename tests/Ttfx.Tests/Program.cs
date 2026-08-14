@@ -23,6 +23,7 @@ internal static class Program
         tests.AddRange(TerminalGroupingTests.All());
         tests.AddRange(TickMachineryTests.All());
         tests.AddRange(WipeEffectTests.All());
+        tests.AddRange(SignalsResizeTests.All());
 
         foreach (TestCase test in tests)
         {

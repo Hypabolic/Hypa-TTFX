@@ -128,6 +128,11 @@ public sealed class Terminal
     public ColorFrequency InputColorsFrequency { get; }
     public (long Width, long Height) TerminalDimensions { get; }
     public Layout Layout { get; }
+    /// <summary>
+    /// Pre-wrap input line lengths — all <c>ComputeLayout</c> needs from the input,
+    /// so a resize can re-derive the geometry without re-preprocessing.
+    /// </summary>
+    internal List<long> InputLineLengths { get; }
     public long CanvasColumnOffset { get; }
     public long CanvasRowOffset { get; }
     public long VisibleTop { get; }
@@ -147,6 +152,8 @@ public sealed class Terminal
     private readonly byte[] _moveCursorToTop;
     private readonly long _frameRate;
     private long _lastTimePrinted;
+    /// <summary>Stopwatch timestamp of the latest SIGWINCH; 0 = none. Shared with Interlocked.</summary>
+    private long _resizeSeenAt;
 
     private Terminal(
         TerminalConfig config,
@@ -155,6 +162,7 @@ public sealed class Terminal
         uint nextCharacterId,
         ColorFrequency inputColorsFrequency,
         (long, long) terminalDimensions,
+        List<long> inputLineLengths,
         Layout layout,
         List<CharId> inputCharacters,
         Dictionary<Coord, CharId> characterByInputCoord)
@@ -165,6 +173,7 @@ public sealed class Terminal
         NextCharacterId = nextCharacterId;
         InputColorsFrequency = inputColorsFrequency;
         TerminalDimensions = terminalDimensions;
+        InputLineLengths = inputLineLengths;
         Layout = layout;
         CanvasColumnOffset = layout.ColumnOffset;
         CanvasRowOffset = layout.RowOffset;
@@ -241,6 +250,7 @@ public sealed class Terminal
             nextCharacterId,
             inputColorsFrequency,
             (termWidth, termHeight),
+            inputLineLengths,
             layout,
             inputCharacters,
             characterByInputCoord);
@@ -1121,6 +1131,68 @@ public sealed class Terminal
         {
             output.Write(Encoding.UTF8.GetBytes(end));
         }
+    }
+
+    /// <summary>
+    /// Whether a resize has landed, settled, and actually moved something.
+    ///
+    /// Settled: dragging a window edge emits a SIGWINCH per step, and rebuilding
+    /// for each one pins the animation at its opening frames for the whole drag.
+    /// Each signal restarts a quiet window; the old canvas keeps animating until
+    /// it expires, so the wait costs nothing on screen.
+    ///
+    /// Moved something: a new terminal size is not enough. With an input-sized
+    /// canvas and no anchor offsets most resizes leave every rendered cell
+    /// exactly where it was, and restarting for those is pure loss. Explicitly
+    /// ignored dimensions are fixed by definition.
+    /// Transcribed from <c>engine/terminal.rs</c> 622-640.
+    /// </summary>
+    public bool ResizeSettled()
+    {
+        // 50 ms quiet window that restarts on every further SIGWINCH.
+        long quietTicks = Stopwatch.Frequency / 20;
+
+        if (Signals.TakeTerminalResize())
+        {
+            Interlocked.Exchange(ref _resizeSeenAt, Stopwatch.GetTimestamp());
+        }
+
+        long seen = Interlocked.Read(ref _resizeSeenAt);
+        if (seen == 0 || Stopwatch.GetTimestamp() - seen < quietTicks)
+        {
+            return false;
+        }
+
+        Interlocked.Exchange(ref _resizeSeenAt, 0);
+        if (Config.IgnoreTerminalDimensions)
+        {
+            return false;
+        }
+
+        (long width, long height) = GetTerminalDimensions();
+        if ((width, height) == TerminalDimensions)
+        {
+            return false;
+        }
+
+        return ComputeLayout(Config, InputLineLengths, width, height) != Layout;
+    }
+
+    /// <summary>
+    /// After a resize: go back to the top of the area this run allocated, wipe
+    /// it, and leave the cursor there so the rebuilt canvas takes the same rows
+    /// instead of scrolling a second one into the terminal.
+    /// Transcribed from <c>engine/terminal.rs</c> 642-652.
+    /// </summary>
+    public void ResetCanvasArea(Stream output)
+    {
+        output.Write(Encoding.UTF8.GetBytes(Ansi.DecRestoreCursor));
+        if (VisibleTop > 0)
+        {
+            output.Write(Encoding.UTF8.GetBytes(Ansi.MoveCursorUp((int)VisibleTop)));
+        }
+
+        output.Write(Encoding.UTF8.GetBytes(Ansi.ClearToEndOfScreen));
     }
 
     /// <summary>

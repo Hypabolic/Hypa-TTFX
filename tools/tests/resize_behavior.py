@@ -23,7 +23,7 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-BIN = sys.argv[1] if len(sys.argv) > 1 else str(ROOT / "target/release/ttfx")
+BIN = sys.argv[1] if len(sys.argv) > 1 else str(ROOT / "artifacts/ttfx")
 HIDE, SHOW = b"\x1b[?25l", b"\x1b[?25h"
 MAX_BYTES = 8 << 20
 TEXT = b"hello world\nsecond line"
@@ -117,22 +117,26 @@ def main() -> int:
     # A slow consumer keeps the process alive across the resize; a file sink
     # drains instantly and the animation would finish before the signal lands.
     print("stdout piped to a slow consumer, window resized")
-    piped = ["--seed", "1", "--canvas-width", "0", "pour"]
-    quiet = drive(piped, stdout_pipe=True, slow=True, first_delay=0.5, budget=6.0)
-    noisy = drive(piped, resizes=[(40, 24)], stdout_pipe=True, slow=True, first_delay=0.5, budget=6.0)
+    # --max-frames is dump-only; wipe's colored frames are larger than pour
+    # (60435 vs ~55735), so the inherited 6s slow-drain budget cannot empty
+    # the pipe. 12s still uses first_delay=0.5 and does not touch debounce
+    # timing. The child exits after ~3s; the extra budget is drain time.
+    piped = ["--seed", "1", "--canvas-width", "0", "wipe"]
+    quiet = drive(piped, stdout_pipe=True, slow=True, first_delay=0.5, budget=12.0)
+    noisy = drive(piped, resizes=[(40, 24)], stdout_pipe=True, slow=True, first_delay=0.5, budget=12.0)
     check("runs without a resize", runs_in(quiet), 1)
     check("runs with a resize", runs_in(noisy), 1)
     check("bytes match the undisturbed run", len(noisy), len(quiet))
 
     print("tty, resize that cannot move a cell")
-    check("runs", runs_in(drive(["--seed", "1", "pour"], resizes=[(100, 30)])), 1)
+    check("runs", runs_in(drive(["--seed", "1", "wipe"], resizes=[(100, 30)])), 1)
 
     print("tty, resize that changes the canvas")
-    changed = drive(["--seed", "1", "pour"], resizes=[(8, 24)])
+    changed = drive(["--seed", "1", "wipe"], resizes=[(8, 24)])
     check("runs", runs_in(changed), 2)
 
     print("tty, burst of resizes during a drag")
-    burst = drive(["--seed", "1", "pour"],
+    burst = drive(["--seed", "1", "wipe"],
                   resizes=[(9, 24), (8, 24), (7, 24), (6, 24), (7, 24), (8, 24)], gap=0.02)
     rebuilds = runs_in(burst)
     ok = rebuilds <= 3

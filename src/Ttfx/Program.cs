@@ -55,8 +55,32 @@ internal static class Program
 
         if (root.Probe)
         {
+            if (!root.ParityDump)
+            {
+                Signals.InstallSigintHandler();
+            }
+
+            if (PosixTerminal.IsStdoutTty())
+            {
+                Signals.InstallSigtermHandler();
+            }
+            else
+            {
+                Signals.RestoreDefaultSigterm();
+            }
+
             while (true)
             {
+                if (Signals.Terminated())
+                {
+                    Signals.DieFromSigterm();
+                }
+
+                if (Signals.Interrupted())
+                {
+                    return 1;
+                }
+
                 Console.Out.Write('\n');
             }
         }
@@ -95,7 +119,19 @@ internal static class Program
         // resolution — --m0-dump does not require an effect.
         if (root.M0Dump)
         {
-            return M0Dump(inputData, root);
+            try
+            {
+                return M0Dump(inputData, root);
+            }
+            catch (BrokenPipeException)
+            {
+                return 0;
+            }
+            catch (IOException ex)
+            {
+                Console.Error.WriteLine($"Error: {ex.Message}");
+                return 1;
+            }
         }
 
         if (root.RandomEffect)
@@ -131,41 +167,99 @@ internal static class Program
 
         Rng rng = root.Seed is ulong seed ? Rng.Seeded(seed) : Rng.FromEntropy();
 
-        IEffect effect;
+        EffectSpec spec;
+        Dictionary<string, object> effectOptions;
         if (root.RandomEffect)
         {
             List<string> names = FilteredEffectNames(root);
             string name = names[rng.ChoiceIndex(names.Count)];
             ParseResult defaultsOnly = CliParser.Parse([name]);
-            EffectSpec spec = EffectRegistry.Find(name)!;
+            spec = EffectRegistry.Find(name)!;
             if (spec.Factory is null)
             {
                 Console.Error.WriteLine($"Error: failed to build effect '{name}'.");
                 return 1;
             }
 
-            effect = spec.Factory(defaultsOnly.EffectOptions);
+            effectOptions = defaultsOnly.EffectOptions;
         }
         else
         {
-            EffectSpec spec = EffectRegistry.Find(parsed.EffectName!)!;
+            spec = EffectRegistry.Find(parsed.EffectName!)!;
             if (spec.Factory is null)
             {
                 Console.Error.WriteLine($"Error: failed to build effect '{parsed.EffectName}'.");
                 return 1;
             }
 
-            effect = spec.Factory(parsed.EffectOptions);
+            effectOptions = parsed.EffectOptions;
         }
 
-        Clock clock = root.ParityDump || root.VirtualClock
-            ? Clock.VirtualWithFrameRate(root.FrameRate)
-            : Clock.MakeReal();
+        // SIGWINCH is delivered to every process in the terminal's foreground group,
+        // whatever its stdout points at. Reacting to it when the animation is being
+        // redirected would leave a truncated first run followed by a complete second
+        // one in the file. SIGTERM teardown is tty-only for the same reason: a
+        // redirected stream must not gain teardown bytes. Only the teardown differs
+        // — the tty run re-raises afterwards, so both die from the signal.
+        bool ttyOutput = !root.ParityDump && PosixTerminal.IsStdoutTty();
+        if (!root.ParityDump)
+        {
+            Signals.InstallSigintHandler();
+        }
 
-        EngineWorld world;
+        if (ttyOutput)
+        {
+            Signals.InstallSigtermHandler();
+            Signals.InstallSigwinchHandler();
+        }
+        else
+        {
+            Signals.RestoreDefaultSigterm();
+        }
+
+        TerminalConfig config = TerminalConfig.FromRoot(root);
         try
         {
-            world = EngineWorld.New(inputData, TerminalConfig.FromRoot(root), rng, clock);
+            while (true)
+            {
+                Clock clock = root.ParityDump || root.VirtualClock
+                    ? Clock.VirtualWithFrameRate(config.FrameRate)
+                    : Clock.MakeReal();
+                EngineWorld world = EngineWorld.New(inputData, config, rng, clock);
+                IEffect effect = spec.Factory!(effectOptions);
+                RunOutcome outcome;
+                if (root.ParityDump)
+                {
+                    EffectRunner.DumpEffect(effect, world, root.MaxFrames);
+                    outcome = RunOutcome.Complete;
+                }
+                else
+                {
+                    outcome = EffectRunner.RunEffect(effect, world, ttyOutput);
+                }
+
+                if (outcome == RunOutcome.TerminalResized)
+                {
+                    // run_effect wiped the old area and left the cursor at its top,
+                    // so the rebuild lays out from here. --reuse-canvas would send
+                    // prep_canvas to a DEC anchor that no longer applies, so it only
+                    // governs the first run.
+                    config.ReuseCanvas = false;
+                    rng = world.Rng;
+                    continue;
+                }
+
+                break;
+            }
+        }
+        catch (BrokenPipeException)
+        {
+            return 0;
+        }
+        catch (IOException ex)
+        {
+            Console.Error.WriteLine($"Error: {ex.Message}");
+            return 1;
         }
         catch (UnsupportedAnsiException ex)
         {
@@ -178,20 +272,13 @@ internal static class Program
             return 1;
         }
 
-        try
+        if (Signals.Terminated())
         {
-            if (root.ParityDump)
-            {
-                EffectRunner.DumpEffect(effect, world, root.MaxFrames);
-            }
-            else
-            {
-                EffectRunner.RunEffect(effect, world);
-            }
+            Signals.DieFromSigterm();
         }
-        catch (EngineException ex)
+
+        if (Signals.Interrupted())
         {
-            Console.Error.WriteLine($"Error: {ex.Message}");
             return 1;
         }
 
@@ -228,7 +315,7 @@ internal static class Program
         }
 
         ReadOnlyMemory<byte> frame = terminal.GetFormattedOutputString();
-        using Stream stdout = Console.OpenStandardOutput();
+        using Stream stdout = StdIo.OpenStdout();
         stdout.Write(frame.Span);
         stdout.Write("\n"u8);
         return 0;
