@@ -10,15 +10,30 @@
 #[path = "../src/utils/rng.rs"]
 mod rng;
 
-const SEED: u64 = 42;
+const DEFAULT_SEED: u64 = 42;
 const N: usize = 10_000;
 
+fn parse_seed() -> u64 {
+    let mut args = std::env::args().skip(1);
+    while let Some(arg) = args.next() {
+        if arg == "--seed" {
+            return args
+                .next()
+                .expect("--seed needs a u64")
+                .parse()
+                .expect("invalid --seed");
+        }
+    }
+    DEFAULT_SEED
+}
+
 fn main() {
-    println!("SEED {SEED}");
+    let seed = parse_seed();
+    println!("SEED {seed}");
     println!("COUNT {N}");
 
     {
-        let mut r = rng::Rng::seeded(SEED);
+        let mut r = rng::Rng::seeded(seed);
         println!("SECTION random");
         for _ in 0..N {
             println!("{:016x}", r.random().to_bits());
@@ -26,7 +41,7 @@ fn main() {
     }
 
     {
-        let mut r = rng::Rng::seeded(SEED);
+        let mut r = rng::Rng::seeded(seed);
         println!("SECTION randint 0 2");
         for _ in 0..N {
             println!("{}", r.randint(0, 2));
@@ -34,7 +49,7 @@ fn main() {
     }
 
     {
-        let mut r = rng::Rng::seeded(SEED);
+        let mut r = rng::Rng::seeded(seed);
         println!("SECTION randrange 0 5");
         for _ in 0..N {
             println!("{}", r.randrange(0, 5));
@@ -42,7 +57,7 @@ fn main() {
     }
 
     {
-        let mut r = rng::Rng::seeded(SEED);
+        let mut r = rng::Rng::seeded(seed);
         let seq = ["a", "b", "c", "d", "e"];
         println!("SECTION choice a b c d e");
         for _ in 0..N {
@@ -51,7 +66,7 @@ fn main() {
     }
 
     {
-        let mut r = rng::Rng::seeded(SEED);
+        let mut r = rng::Rng::seeded(seed);
         println!("SECTION choice_index 7");
         for _ in 0..N {
             println!("{}", r.choice_index(7));
@@ -59,7 +74,7 @@ fn main() {
     }
 
     {
-        let mut r = rng::Rng::seeded(SEED);
+        let mut r = rng::Rng::seeded(seed);
         println!("SECTION uniform 1 2");
         for _ in 0..N {
             println!("{:016x}", r.uniform(1.0, 2.0).to_bits());
@@ -67,7 +82,7 @@ fn main() {
     }
 
     {
-        let mut r = rng::Rng::seeded(SEED);
+        let mut r = rng::Rng::seeded(seed);
         println!("SECTION shuffle 0 1 2 3 4 5 6 7");
         for _ in 0..N {
             let mut seq = [0i32, 1, 2, 3, 4, 5, 6, 7];

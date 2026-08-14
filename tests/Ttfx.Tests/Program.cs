@@ -16,6 +16,8 @@ internal static class Program
         tests.AddRange(GraphicsTests.All());
         tests.AddRange(ColorPipelineTests.All());
         tests.AddRange(UnicodeTests.All());
+        tests.AddRange(PyCompatTests.All());
+        tests.AddRange(RngVectors.All());
 
         foreach (TestCase test in tests)
         {

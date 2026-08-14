@@ -67,4 +67,49 @@ if hits:
     sys.exit(1)
 PY
 
+# Checklist §1: existing C# translations of the 18 float→i64 sites must go
+# through TruncToI64 (or TruncToUsize for easing.rs's as i64 as usize).
+# Sites whose effect/eval files do not exist yet must not fail the build.
+python3 - "$ROOT" <<'PY'
+import re
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+
+# (relative cs path, markers that the site has been translated, required helper)
+SITES = [
+    ("src/Ttfx/Utils/Easing.cs", ("SequenceEaser", "eased_value"), "TruncToUsize|TruncToI64"),
+    ("src/Ttfx/Utils/Graphics.cs", ("ShiftColorTowards",), "TruncToI64"),
+    ("src/Ttfx/Utils/Geometry.cs", ("FindCoordsInCircle",), "TruncToI64"),
+    ("src/Ttfx/Effects/Colorshift.cs", ("direction_index", "ColorShift"), "TruncToI64"),
+    ("src/Ttfx/Effects/ColorShift.cs", ("direction_index", "ColorShift"), "TruncToI64"),
+    ("src/Ttfx/Effects/OrbittingVolley.cs", ("parent_progress", "volley_size", "ParentProgress"), "TruncToI64"),
+    ("src/Ttfx/Effects/Matrix.cs", ("characters.len", "0.1"), "TruncToI64"),
+    ("src/Ttfx/Effects/BinaryPath.cs", ("active_binary_groups", "0.2"), "TruncToI64"),
+    ("src/Ttfx/Effects/Spotlights.cs", ("smallest_dimension", "SmallestDimension"), "TruncToI64"),
+    ("src/Ttfx/Effects/BouncyBalls.cs", ("uniform(1.0, 1.5)", "Uniform(1.0, 1.5)"), "TruncToI64"),
+    ("src/Ttfx/Effects/RandomSequence.cs", ("speed * input_len", "input_len"), "TruncToI64"),
+    ("src/Ttfx/Effects/Spray.cs", ("spray_volume", "SprayVolume"), "TruncToI64"),
+    ("src/Ttfx/Effects/ErrorCorrect.cs", ("error_pairs", "ErrorPairs"), "TruncToI64"),
+    ("src/Ttfx/Effects/Fireworks.cs", ("launch_delay", "LaunchDelay"), "TruncToI64"),
+]
+
+hits = []
+for rel, markers, require in SITES:
+    path = root / rel
+    if not path.is_file():
+        continue
+    text = path.read_text(encoding="utf-8")
+    if not any(m in text for m in markers):
+        continue
+    if re.search(require, text) is None:
+        hits.append(f"{rel}: translated checklist §1 site must use {require}")
+
+if hits:
+    print("checklist §1 TruncToI64 missing:", file=sys.stderr)
+    print("\n".join(hits), file=sys.stderr)
+    sys.exit(1)
+PY
+
 dotnet run --project tests/Ttfx.Tests -c Release --no-launch-profile
