@@ -17,6 +17,8 @@ bouncyballs-basic|basic.txt|bouncyballs
 bouncyballs-custom|paragraph.txt|bouncyballs --ball-colors ff0000 00ff00 0000ff --ball-symbols o . x --ball-delay 0 --movement-speed 1.2 --movement-easing out_quad --final-gradient-direction horizontal
 bouncyballs-dynamic|colored.txt|--existing-color-handling dynamic bouncyballs
 bouncyballs-xterm-anchored|paragraph.txt|--xterm-colors --canvas-width 60 --canvas-height 20 --anchor-canvas c --anchor-text c bouncyballs
+# 0007 unicode fixture: astral-plane + combining marks (one codepoint = one cell).
+bouncyballs-unicode|unicode.txt|bouncyballs
 bubbles-basic|basic.txt|bubbles
 bubbles-bottom|paragraph.txt|bubbles --pop-condition bottom --bubble-colors ff0000 00ff00 --pop-color 00ffff --movement-easing out_bounce
 bubbles-dynamic|colored.txt|--existing-color-handling dynamic bubbles --bubble-delay 5

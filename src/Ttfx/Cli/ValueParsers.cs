@@ -188,6 +188,9 @@ public static class ValueParsers
         throw new UsageError($"{FormatF64(v)} is not a valid value. Argument must be a float > 0.");
     }
 
+    /// <summary>common.rs parse_positive_float: float &gt; 0, boxed for OptionSpec.</summary>
+    public static object ParsePositiveFloat(string s) => PositiveFloat(s);
+
     public static double NonNegativeFloat(string s)
     {
         double v = ParseF64(s);
