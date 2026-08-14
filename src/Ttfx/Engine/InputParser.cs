@@ -53,7 +53,7 @@ internal sealed class ActiveState
 /// <summary>
 /// Input preprocessing: the mini terminal emulator from Terminal._preprocess_input_data.
 ///
-/// Walks the input codepoint-by-codepoint (one char = one cell, faithfully — no
+/// Walks the input codepoint-by-codepoint (one rune = one cell, faithfully — no
 /// wcwidth upstream), tracking SGR color state and cursor movement, producing
 /// rows of arena character ids. Everything here, including which malformed
 /// sequences error vs. get silently ignored, transcribes terminal.py:604-862.

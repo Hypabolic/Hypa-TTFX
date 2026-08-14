@@ -17,4 +17,54 @@ if grep -R -nE 'GetType\s*\(|GetProperties\s*\(|GetMethod\s*\(|\.Invoke\s*\(' sr
   exit 1
 fi
 
+# Bare culture-sensitive Parse / ToLower / StartsWith (and EndsWith / IndexOf)
+# in src/. Allowlist: ToLowerInvariant / ToUpperInvariant, StringComparison.Ordinal*,
+# CultureInfo.InvariantCulture, NumberStyles, and char-overload StartsWith/EndsWith/IndexOf('x').
+# Comment-only lines are skipped. Custom Parse methods (CliParser.Parse, EasingParse.Parse)
+# are not BCL numeric Parse and are not matched. Multiline TryParse(..., NumberStyles,
+# InvariantCulture) is allowlisted by looking at the rest of the statement.
+python3 - "$ROOT" <<'PY'
+import re
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+comment = re.compile(r"^\s*(///|//)")
+to_case = re.compile(r"\.To(Lower|Upper)\s*\(")
+to_case_ok = re.compile(r"To(Lower|Upper)Invariant")
+starts = re.compile(r"\.(StartsWith|EndsWith|IndexOf)\s*\(")
+starts_char = re.compile(r"\.(StartsWith|EndsWith|IndexOf)\s*\(\s*'")
+ordinal = re.compile(r"StringComparison\.(Ordinal|OrdinalIgnoreCase)")
+parse = re.compile(
+    r"\b(?:int|long|double|float|decimal|byte|short|uint|ulong|sbyte|ushort|DateTime)\.(TryParse|Parse)\s*\("
+)
+parse_ok = re.compile(r"InvariantCulture|NumberStyles")
+
+hits = []
+for path in sorted((root / "src").rglob("*.cs")):
+    lines = path.read_text(encoding="utf-8").splitlines()
+    for i, line in enumerate(lines):
+        if comment.match(line):
+            continue
+        if to_case.search(line) and not to_case_ok.search(line):
+            hits.append(f"{path.relative_to(root)}:{i + 1}:{line.rstrip()}")
+            continue
+        if starts.search(line) and not starts_char.search(line) and not ordinal.search(line):
+            hits.append(f"{path.relative_to(root)}:{i + 1}:{line.rstrip()}")
+            continue
+        if parse.search(line):
+            stmt = [line]
+            j = i + 1
+            while j < len(lines) and ";" not in "".join(stmt):
+                stmt.append(lines[j])
+                j += 1
+            if not parse_ok.search("\n".join(stmt)):
+                hits.append(f"{path.relative_to(root)}:{i + 1}:{line.rstrip()}")
+
+if hits:
+    print("culture-sensitive Parse/ToLower/StartsWith (use Invariant/Ordinal/NumberStyles):", file=sys.stderr)
+    print("\n".join(hits), file=sys.stderr)
+    sys.exit(1)
+PY
+
 dotnet run --project tests/Ttfx.Tests -c Release --no-launch-profile

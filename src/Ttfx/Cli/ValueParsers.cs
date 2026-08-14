@@ -277,13 +277,8 @@ public static class ValueParsers
 
     public static string Symbol(string s)
     {
-        var enumerator = s.EnumerateRunes();
-        if (!enumerator.MoveNext())
-        {
-            throw new UsageError($"invalid symbol: '{s}' argument must be a single character");
-        }
-
-        if (enumerator.MoveNext())
+        // common.rs:116 — s.chars().count() == 1 (runes, not UTF-16 length)
+        if (Unicode.RuneCount(s) != 1)
         {
             throw new UsageError($"invalid symbol: '{s}' argument must be a single character");
         }

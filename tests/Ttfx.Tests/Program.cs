@@ -15,6 +15,7 @@ internal static class Program
         tests.AddRange(M0FrameTests.All());
         tests.AddRange(GraphicsTests.All());
         tests.AddRange(ColorPipelineTests.All());
+        tests.AddRange(UnicodeTests.All());
 
         foreach (TestCase test in tests)
         {
