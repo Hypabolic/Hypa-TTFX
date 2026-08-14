@@ -498,6 +498,12 @@ public static class CliParser
             case "--probe":
                 root.Probe = true;
                 break;
+            case "--easing-golden-dump":
+                root.EasingGoldenDump = true;
+                break;
+            case "--geometry-golden-dump":
+                root.GeometryGoldenDump = true;
+                break;
             default:
                 throw new UsageError($"unexpected argument '{spec.Long}'");
         }

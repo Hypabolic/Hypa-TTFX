@@ -61,4 +61,6 @@ Do not edit them in this repo to "fix" anything — they are the inherited contr
 | `tools/parity/fetch_reference.sh` | Clone/build/cache the pinned `ttfx` binary |
 | `tools/parity/reference.sh` | `ref_dump` / `ref_m0` / `ref_tty` adapter |
 | `tools/parity/rngdump.rs` | Dropped into the fetched checkout as `examples/rngdump.rs` |
+| `tools/parity/easingdump.rs` | Dropped into the fetched checkout as `examples/easingdump.rs` |
+| `tools/parity/geometrydump.rs` | Dropped into the fetched checkout as `examples/geometrydump.rs` |
 | `tools/parity/pty_launch.py` | Real-pty launcher used by `ref_tty` |

@@ -112,4 +112,62 @@ if hits:
     sys.exit(1)
 PY
 
+# Checklist §2: no x*x for powf(2), no Math.Sqrt for powf(0.5) in Easing/Geometry.
+# Circ .sqrt() transcription and double.Hypot are allowed.
+python3 - "$ROOT" <<'PY'
+import re
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+self_mul = re.compile(r"\b([A-Za-z_]\w*)\s*\*\s*\1\b")
+comment = re.compile(r"^\s*(///|//)")
+hits = []
+
+easing = root / "src/Ttfx/Utils/Easing.cs"
+geometry = root / "src/Ttfx/Utils/Geometry.cs"
+for path in (easing, geometry):
+    if not path.is_file():
+        hits.append(f"{path.relative_to(root)}: missing")
+        continue
+    text = path.read_text(encoding="utf-8")
+    for i, line in enumerate(text.splitlines(), 1):
+        if comment.match(line):
+            continue
+        if self_mul.search(line):
+            hits.append(f"{path.relative_to(root)}:{i}: x*x standing in for powf(2): {line.rstrip()}")
+
+if geometry.is_file():
+    gtext = geometry.read_text(encoding="utf-8")
+    if "Math.Pow" not in gtext:
+        hits.append("src/Ttfx/Utils/Geometry.cs: must use Math.Pow for powf")
+    if "Hypot" not in gtext:
+        hits.append("src/Ttfx/Utils/Geometry.cs: must use double.Hypot")
+    for i, line in enumerate(gtext.splitlines(), 1):
+        if comment.match(line):
+            continue
+        if "Math.Sqrt" in line:
+            hits.append(f"src/Ttfx/Utils/Geometry.cs:{i}: Math.Sqrt standing in for powf(0.5): {line.rstrip()}")
+
+if easing.is_file():
+    etext = easing.read_text(encoding="utf-8")
+    if etext.count("Math.Pow") < 30:
+        hits.append("src/Ttfx/Utils/Easing.cs: too few Math.Pow calls (powf transcription)")
+    for i, line in enumerate(etext.splitlines(), 1):
+        if comment.match(line):
+            continue
+        if "Math.Sqrt" in line and "Circ" not in line:
+            hits.append(f"src/Ttfx/Utils/Easing.cs:{i}: Math.Sqrt only allowed on Circ .sqrt() lines: {line.rstrip()}")
+
+if hits:
+    print("checklist §2 powf/hypot substitution:", file=sys.stderr)
+    print("\n".join(hits), file=sys.stderr)
+    sys.exit(1)
+PY
+
+if [ ! -x "$ROOT/artifacts/ttfx" ]; then
+  echo "bin/test: artifacts/ttfx missing; run bin/build first (goldens assert against the AOT binary)" >&2
+  exit 1
+fi
+
 dotnet run --project tests/Ttfx.Tests -c Release --no-launch-profile

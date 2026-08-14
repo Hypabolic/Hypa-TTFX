@@ -33,6 +33,8 @@ public sealed class RootOptions
     public ulong? MaxFrames { get; set; }
     public bool VirtualClock { get; set; }
     public bool Probe { get; set; }
+    public bool EasingGoldenDump { get; set; }
+    public bool GeometryGoldenDump { get; set; }
 
     public static OptionSpec[] Specs { get; } =
     [
@@ -63,5 +65,7 @@ public sealed class RootOptions
         new OptionSpec("--max-frames", null, "N", "", OptionArity.One, null, ValueParsers.ParseSeed),
         new OptionSpec("--virtual-clock", null, "", "", OptionArity.Flag, null, _ => true),
         new OptionSpec("--probe", null, "", "", OptionArity.Flag, null, _ => true),
+        new OptionSpec("--easing-golden-dump", null, "", "", OptionArity.Flag, null, _ => true),
+        new OptionSpec("--geometry-golden-dump", null, "", "", OptionArity.Flag, null, _ => true),
     ];
 }

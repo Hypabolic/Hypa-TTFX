@@ -35,6 +35,18 @@ internal static class Program
             return 0;
         }
 
+        // Hidden golden dumps: AOT-published binary, no input required.
+        if (root.EasingGoldenDump)
+        {
+            using Stream stdout = Console.OpenStandardOutput();
+            return GoldenDumps.WriteEasing(stdout);
+        }
+
+        if (root.GeometryGoldenDump)
+        {
+            return GoldenDumps.WriteGeometry(Console.Out);
+        }
+
         if (root.PrintCompletion is not null)
         {
             return 0;

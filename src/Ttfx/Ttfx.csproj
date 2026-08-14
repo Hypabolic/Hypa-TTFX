@@ -9,4 +9,8 @@
     <OptimizationPreference>Speed</OptimizationPreference>
   </PropertyGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Ttfx.Tests" />
+  </ItemGroup>
+
 </Project>

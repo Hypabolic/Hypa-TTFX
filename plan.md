@@ -1083,19 +1083,13 @@ boundary-tolerant easing assertion), the AOT publish, the CLI corpus, and the si
 If §7.7's measurement below comes back clean, the gate widens; until then §9's "runs on both
 platforms" means *this* script on both platforms, not the full parity suite on both.
 
-**Provisional**: the parity suites *may* be able to run on macOS too. The argument is that
-both sides are native binaries on one machine, so the cross-libm caveat that forced ttfx to
-pin byte-exact parity to Linux/glibc would not apply. But that assumes .NET routes
-transcendentals to the platform libm rather than carrying its own implementations, and ttfx's
-README already records that Apple's libm rounds a few transcendentals a last-ulp differently
-— so the Rust side has known macOS sensitivity.
-
-**Settle it empirically in M1**, right after the easing port: dump `Easing` outputs at 1e-3
-steps from both binaries on this Mac and `cmp` them; repeat for the geometry lattice. If they
-match, the full suite runs on both platforms. If they don't, adopt ttfx's arrangement — byte-
-exact suites pinned to Linux, macOS CI limited to build + unit goldens (with the boundary-
-tolerant assertion) + CLI corpus + signal behavior. Do not build CI on the optimistic branch
-before the measurement.
+**Measured on osx-x64 (2026-08-14), AOT `artifacts/ttfx` vs Rust `easingdump`/`geometrydump`
+at the fetched pin.** Easing at 1e-3 steps (34 functions × 1001 samples): 34030/34034
+bit-exact. The 4 mismatches are all `CubicBezier` (p=0.192 ulp 1; p=0.256 ulp 4; p=0.379
+ulp 17; p=0.400 ulp 2); max abs 2.359e-16; **zero** samples exceed the 1e-15 macOS
+schedule. Geometry: all 77 quantized coordinate lines byte-exact, and all 10 raw-float
+lines (`bezier_len` / `line_len` / `norm_dist`) bit-exact. The quantized integer lattice
+matches, so **byte-exact CI can run on macOS**.
 
 ---
 

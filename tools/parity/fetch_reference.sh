@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Clone ttfx at the commit pinned in REFERENCE.md, cargo build --release,
-# cache the binary by commit hash, and drop tools/parity/rngdump.rs into the
-# checkout as examples/rngdump.rs.
+# cache the binary by commit hash, and drop tools/parity/{rngdump,easingdump,
+# geometrydump}.rs into the checkout as examples/.
 #
 # Installs the oracle at reference/ttfx — never on PATH, never into artifacts/.
 # The C# AOT binary lives at artifacts/ttfx; both are named ttfx and must stay
@@ -15,6 +15,8 @@ REF_MD="$ROOT/REFERENCE.md"
 SRC="$ROOT/reference/src"
 DEST_BIN="$ROOT/reference/ttfx"
 RNGDUMP_SRC="$ROOT/tools/parity/rngdump.rs"
+EASINGDUMP_SRC="$ROOT/tools/parity/easingdump.rs"
+GEOMETRYDUMP_SRC="$ROOT/tools/parity/geometrydump.rs"
 LOCAL_REF="${HYPA_TTFX_LOCAL_REF:-$HOME/Development/reference-implementations/ttfx}"
 
 need() {
@@ -35,6 +37,14 @@ fi
 
 if [ ! -f "$RNGDUMP_SRC" ]; then
   echo "fetch_reference.sh: $RNGDUMP_SRC is missing" >&2
+  exit 1
+fi
+if [ ! -f "$EASINGDUMP_SRC" ]; then
+  echo "fetch_reference.sh: $EASINGDUMP_SRC is missing" >&2
+  exit 1
+fi
+if [ ! -f "$GEOMETRYDUMP_SRC" ]; then
+  echo "fetch_reference.sh: $GEOMETRYDUMP_SRC is missing" >&2
   exit 1
 fi
 
@@ -131,11 +141,13 @@ if [ "$actual" != "$PIN" ]; then
   exit 1
 fi
 
-# Always refresh the example, including on a cache hit, so
-# `cargo run --example rngdump` works in the fetched tree.
+# Always refresh the examples, including on a cache hit, so
+# `cargo run --example rngdump` (and easingdump / geometrydump) works.
 mkdir -p "$SRC/examples"
 cp -f "$RNGDUMP_SRC" "$SRC/examples/rngdump.rs"
-echo "installed $SRC/examples/rngdump.rs"
+cp -f "$EASINGDUMP_SRC" "$SRC/examples/easingdump.rs"
+cp -f "$GEOMETRYDUMP_SRC" "$SRC/examples/geometrydump.rs"
+echo "installed $SRC/examples/{rngdump,easingdump,geometrydump}.rs"
 
 if [ -x "$CACHE_BIN" ] && [ -s "$CACHE_BIN" ]; then
   echo "cache hit: $CACHE_BIN"
