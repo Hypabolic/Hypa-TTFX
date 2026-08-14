@@ -229,12 +229,12 @@ public static class ValueParsers
         int byteLen = Encoding.UTF8.GetByteCount(s);
         if (byteLen <= 3)
         {
-            if (!TryParseU8(s, out _))
+            if (!TryParseU8(s, out byte code))
             {
                 throw new UsageError($"invalid color value: '{s}'");
             }
 
-            return new Color(s);
+            return Color.FromXterm(code, s);
         }
 
         if (!IsValidHexColorArg(s))
@@ -244,7 +244,7 @@ public static class ValueParsers
                 + "Example: 255 or 'ffffff' or '#ffffff'");
         }
 
-        return new Color(s);
+        return Color.FromHex(s);
     }
 
     public static object ParseAnchor(string s) => Anchor(s);

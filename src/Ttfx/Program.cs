@@ -78,6 +78,13 @@ internal static class Program
             return 1;
         }
 
+        // main.rs: m0_dump runs after the empty-input check and before effect
+        // resolution — --m0-dump does not require an effect.
+        if (root.M0Dump)
+        {
+            return M0Dump(inputData, root);
+        }
+
         if (root.RandomEffect)
         {
             if (CountFilteredEffects(root) == 0)
@@ -103,7 +110,48 @@ internal static class Program
             Console.Error.WriteLine($"Error: Unsupported ANSI sequence in input data: {ex.Sequence}");
             return 1;
         }
+        catch (EngineException ex)
+        {
+            Console.Error.WriteLine($"Error: {ex.Message}");
+            return 1;
+        }
 
+        return 0;
+    }
+
+    /// <summary>
+    /// M0 parity path: build the Terminal, make every character in
+    /// character_by_input_coord visible, print the first frame to stdout.
+    /// Transcribed from <c>main.rs</c> m0_dump (208-228).
+    /// </summary>
+    private static int M0Dump(string inputData, RootOptions root)
+    {
+        Terminal terminal;
+        try
+        {
+            terminal = Terminal.New(inputData, TerminalConfig.FromRoot(root));
+        }
+        catch (UnsupportedAnsiException ex)
+        {
+            Console.Error.WriteLine($"Error: Unsupported ANSI sequence in input data: {ex.Sequence}");
+            return 1;
+        }
+        catch (EngineException ex)
+        {
+            Console.Error.WriteLine($"Error: {ex.Message}");
+            return 1;
+        }
+
+        var ids = new System.Collections.Generic.List<CharId>(terminal.CharacterByInputCoord.Values);
+        foreach (CharId id in ids)
+        {
+            terminal.SetCharacterVisibility(id, true);
+        }
+
+        ReadOnlyMemory<byte> frame = terminal.GetFormattedOutputString();
+        using Stream stdout = Console.OpenStandardOutput();
+        stdout.Write(frame.Span);
+        stdout.Write("\n"u8);
         return 0;
     }
 

@@ -26,6 +26,22 @@ internal static class ValueParserTests
         Harness.AssertEqual("keep token", "#000000", hex.Original);
         Color seven = ValueParsers.ColorArg("12AbEf7");
         Harness.AssertEqual("7-digit hex", "12AbEf7", seven.Original);
+
+        Color fromXterm = Color.FromXterm(255);
+        Harness.AssertTrue("255 is Xterm", a.ColorArg is ColorArg.Xterm);
+        Harness.AssertTrue("255 ColorArg == FromXterm", a.ColorArg.Equals(fromXterm.ColorArg));
+        Harness.AssertEqual("255 rgb r", fromXterm.RgbInts().R, a.RgbInts().R);
+        Harness.AssertEqual("255 rgb g", fromXterm.RgbInts().G, a.RgbInts().G);
+        Harness.AssertEqual("255 rgb b", fromXterm.RgbInts().B, a.RgbInts().B);
+        Harness.AssertTrue("255 equals FromXterm (same token)", a.Equals(fromXterm));
+
+        Color fromHex = Color.FromHex("ffffff");
+        Harness.AssertTrue("ffffff is Hex", b.ColorArg is ColorArg.Hex);
+        Harness.AssertTrue("ffffff ColorArg == FromHex", b.ColorArg.Equals(fromHex.ColorArg));
+        Harness.AssertEqual("ffffff rgb r", fromHex.RgbInts().R, b.RgbInts().R);
+        Harness.AssertEqual("ffffff rgb g", fromHex.RgbInts().G, b.RgbInts().G);
+        Harness.AssertEqual("ffffff rgb b", fromHex.RgbInts().B, b.RgbInts().B);
+        Harness.AssertTrue("ffffff equals FromHex (same token)", b.Equals(fromHex));
     }
 
     private static void ColorReject()

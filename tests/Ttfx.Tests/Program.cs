@@ -12,6 +12,7 @@ internal static class Program
         tests.AddRange(ValueParserTests.All());
         tests.AddRange(NumericCorpusTests.All());
         tests.AddRange(ReflectionGuardTests.All());
+        tests.AddRange(M0FrameTests.All());
 
         foreach (TestCase test in tests)
         {
