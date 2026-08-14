@@ -44,4 +44,58 @@ public static class PyCompat
 
         return q;
     }
+
+    /// <summary>
+    /// Python's built-in <c>round()</c>: banker's rounding (half-to-even), returning i64.
+    /// Transcribed from <c>utils/pycompat.rs</c>.
+    /// </summary>
+    public static long RoundHalfEven(double x)
+    {
+        double floor = System.Math.Floor(x);
+        double diff = x - floor;
+        if (diff > 0.5)
+        {
+            return (long)floor + 1;
+        }
+
+        if (diff < 0.5)
+        {
+            return (long)floor;
+        }
+
+        // exactly .5 — round to even
+        long f = (long)floor;
+        if (f % 2 == 0)
+        {
+            return f;
+        }
+
+        return f + 1;
+    }
+
+    /// <summary>
+    /// Rust <c>f64::min</c>: returns the non-NaN operand; .NET <c>Math.Min</c> propagates NaN.
+    /// </summary>
+    public static double FMin(double self, double other)
+    {
+        if (other < self || double.IsNaN(self))
+        {
+            return other;
+        }
+
+        return self;
+    }
+
+    /// <summary>
+    /// Rust <c>f64::max</c>: returns the non-NaN operand; .NET <c>Math.Max</c> propagates NaN.
+    /// </summary>
+    public static double FMax(double self, double other)
+    {
+        if (self < other || double.IsNaN(self))
+        {
+            return other;
+        }
+
+        return self;
+    }
 }

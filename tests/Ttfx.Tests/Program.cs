@@ -13,6 +13,8 @@ internal static class Program
         tests.AddRange(NumericCorpusTests.All());
         tests.AddRange(ReflectionGuardTests.All());
         tests.AddRange(M0FrameTests.All());
+        tests.AddRange(GraphicsTests.All());
+        tests.AddRange(ColorPipelineTests.All());
 
         foreach (TestCase test in tests)
         {

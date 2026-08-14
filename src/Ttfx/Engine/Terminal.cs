@@ -186,6 +186,24 @@ public sealed class Terminal
     }
 
     /// <summary>
+    /// EngineCtx preexisting_colors_present scan (ctx.rs:108-111): any surviving
+    /// input character carries an input fg or bg captured at parse time.
+    /// </summary>
+    public bool PreexistingColorsPresent()
+    {
+        foreach (CharId id in InputCharacters)
+        {
+            EffectCharacter ch = Arena[(int)id.Value];
+            if (ch.Animation.InputFgColor is not null || ch.Animation.InputBgColor is not null)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
     /// Terminal._make_fill_characters: row-major from (1,1), fresh space chars
     /// for unoccupied canvas coords, split inner/outer by the text bounds.
     /// </summary>

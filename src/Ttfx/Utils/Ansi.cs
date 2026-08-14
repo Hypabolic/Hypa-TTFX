@@ -1,5 +1,4 @@
 using System;
-using System.Globalization;
 using System.Text;
 
 namespace Ttfx.Utils;
@@ -108,10 +107,10 @@ public static class Ansi
         {
             case ColorCode.Rgb rgb:
             {
-                string s = TrimMatches(rgb.Hex, '#');
-                byte r = byte.Parse(s.AsSpan(0, 2), NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture);
-                byte g = byte.Parse(s.AsSpan(2, 2), NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture);
-                byte b = byte.Parse(s.AsSpan(4, 2), NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture);
+                byte[] channels = Hexterm.ParseRgb(rgb.Hex);
+                byte r = channels[0];
+                byte g = channels[1];
+                byte b = channels[2];
                 outBuf.Append(";2;");
                 PushDecimal(outBuf, r);
                 outBuf.Append(';');
@@ -132,21 +131,4 @@ public static class Ansi
     public static void Fg(ColorCode code, StringBuilder outBuf) => SgrColor(code, 38, outBuf);
 
     public static void Bg(ColorCode code, StringBuilder outBuf) => SgrColor(code, 48, outBuf);
-
-    private static string TrimMatches(string s, char c)
-    {
-        int start = 0;
-        int end = s.Length;
-        while (start < end && s[start] == c)
-        {
-            start++;
-        }
-
-        while (end > start && s[end - 1] == c)
-        {
-            end--;
-        }
-
-        return s.Substring(start, end - start);
-    }
 }

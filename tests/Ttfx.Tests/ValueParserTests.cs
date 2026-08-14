@@ -42,6 +42,11 @@ internal static class ValueParserTests
         Harness.AssertEqual("ffffff rgb g", fromHex.RgbInts().G, b.RgbInts().G);
         Harness.AssertEqual("ffffff rgb b", fromHex.RgbInts().B, b.RgbInts().B);
         Harness.AssertTrue("ffffff equals FromHex (same token)", b.Equals(fromHex));
+
+        Color hashed = Color.FromHex("#000000");
+        Color bare = Color.FromHex("000000");
+        Harness.AssertTrue("#000000 == 000000 (Hex stores stripped rgb_color)", hashed.Equals(bare));
+        Harness.AssertTrue("Color(255) != Color(\"ffffff\")", !Color.FromXterm(255).Equals(Color.FromHex("ffffff")));
     }
 
     private static void ColorReject()

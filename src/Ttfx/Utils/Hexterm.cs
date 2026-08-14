@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using System.Text;
+
 namespace Ttfx.Utils;
 
 /// <summary>
@@ -270,6 +274,146 @@ public static class Hexterm
 
     public static string XtermToHexColor(byte code) => XtermToHex[code];
 
+    private static readonly byte[] XtermR = new byte[256];
+    private static readonly byte[] XtermG = new byte[256];
+    private static readonly byte[] XtermB = new byte[256];
+    private static bool _xtermRgbReady;
+    private static readonly Dictionary<uint, byte> HexToXtermCache = new Dictionary<uint, byte>();
+
+    private static void EnsureXtermRgb()
+    {
+        if (_xtermRgbReady)
+        {
+            return;
+        }
+
+        for (int code = 0; code < 256; code++)
+        {
+            byte[] rgb = ParseRgb(XtermToHex[code]);
+            XtermR[code] = rgb[0];
+            XtermG[code] = rgb[1];
+            XtermB[code] = rgb[2];
+        }
+
+        _xtermRgbReady = true;
+    }
+
+    /// <summary>
+    /// hexterm.rs / graphics.rs parse_rgb: first six digits after trim_matches('#').
+    /// Channel parse matches <c>u8::from_str_radix</c> — optional leading <c>+</c>,
+    /// reject <c>-</c>. Do not use <c>NumberStyles.AllowHexSpecifier</c> (rejects <c>+</c>).
+    /// </summary>
+    internal static byte[] ParseRgb(string hexColor)
+    {
+        string s = TrimMatches(hexColor, '#');
+        return
+        [
+            ParseU8Hex(s.AsSpan(0, 2)),
+            ParseU8Hex(s.AsSpan(2, 2)),
+            ParseU8Hex(s.AsSpan(4, 2)),
+        ];
+    }
+
+    /// <summary>
+    /// Rust <c>u8::from_str_radix(s, 16)</c>: accept optional leading <c>+</c>,
+    /// reject <c>-</c> (unsigned), remaining chars must be hex digits, value in 0..=255.
+    /// </summary>
+    internal static byte ParseU8Hex(ReadOnlySpan<char> s)
+    {
+        if (s.Length == 0)
+        {
+            throw new ArgumentException("invalid hex channel");
+        }
+
+        int i = 0;
+        if (s[0] == '+')
+        {
+            i = 1;
+        }
+        else if (s[0] == '-')
+        {
+            throw new ArgumentException("invalid hex channel");
+        }
+
+        if (i >= s.Length)
+        {
+            throw new ArgumentException("invalid hex channel");
+        }
+
+        int value = 0;
+        for (; i < s.Length; i++)
+        {
+            char c = s[i];
+            int digit;
+            if (c >= '0' && c <= '9')
+            {
+                digit = c - '0';
+            }
+            else if (c >= 'a' && c <= 'f')
+            {
+                digit = c - 'a' + 10;
+            }
+            else if (c >= 'A' && c <= 'F')
+            {
+                digit = c - 'A' + 10;
+            }
+            else
+            {
+                throw new ArgumentException("invalid hex channel");
+            }
+
+            value = (value * 16) + digit;
+            if (value > 255)
+            {
+                throw new ArgumentException("invalid hex channel");
+            }
+        }
+
+        return (byte)value;
+    }
+
+    private static byte ClosestXterm(byte r, byte g, byte b)
+    {
+        EnsureXtermRgb();
+        int minDiff = int.MaxValue;
+        byte closest = 0;
+        for (int code = 0; code < 256; code++)
+        {
+            // Upstream divides this sum by three before comparing it. Division by
+            // the same positive constant is order-preserving, so comparing the
+            // integer sums retains its strict-first-minimum tie behavior exactly.
+            int diff = AbsDiff(r, XtermR[code]) + AbsDiff(g, XtermG[code]) + AbsDiff(b, XtermB[code]);
+            if (diff < minDiff)
+            {
+                minDiff = diff;
+                closest = (byte)code;
+            }
+        }
+
+        return closest;
+    }
+
+    private static int AbsDiff(byte a, byte b) => a >= b ? a - b : b - a;
+
+    /// <summary>
+    /// Closest xterm-256 code by mean absolute channel difference; linear scan over
+    /// codes 0..=255 in order, strict <c>&lt;</c> so the first minimum wins (upstream
+    /// hexterm.py hex_to_xterm).
+    /// </summary>
+    public static byte HexToXterm(string hexColor)
+    {
+        byte[] rgb = ParseRgb(hexColor);
+        uint key = ((uint)rgb[0] << 16) | ((uint)rgb[1] << 8) | rgb[2];
+        if (HexToXtermCache.TryGetValue(key, out byte cached))
+        {
+            return cached;
+        }
+
+        byte closest = ClosestXterm(rgb[0], rgb[1], rgb[2]);
+        HexToXtermCache[key] = closest;
+        return closest;
+    }
+
     /// <summary>
     /// Upstream is_valid_color for strings: 6 (or, faithfully, 7) hex digits with
     /// optional leading '#'s.
@@ -277,7 +421,7 @@ public static class Hexterm
     public static bool IsValidHexColor(string color)
     {
         string startTrimmed = TrimStartMatches(color, '#');
-        int strippedLen = startTrimmed.Length;
+        int strippedLen = Encoding.UTF8.GetByteCount(startTrimmed);
         if (strippedLen != 6 && strippedLen != 7)
         {
             return false;

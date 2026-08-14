@@ -195,10 +195,7 @@ public sealed class Animation
 
     public static Animation New(string inputSymbol) => new Animation(inputSymbol);
 
-    /// <summary>
-    /// Animation._get_color_code. hex_to_xterm is issue 0005; this branch is
-    /// only reached when <c>use_xterm_colors</c> is set on a hex color.
-    /// </summary>
+    /// <summary>Animation._get_color_code.</summary>
     public Ansi.ColorCode? GetColorCode(Color? color)
     {
         if (color is null)
@@ -218,8 +215,7 @@ public sealed class Animation
                 return new Ansi.ColorCode.Xterm(code);
             }
 
-            // hex_to_xterm is 0005; default-option ASCII --m0-dump never hits this.
-            return new Ansi.ColorCode.Rgb(color.RgbColor);
+            return new Ansi.ColorCode.Xterm(Hexterm.HexToXterm(color.RgbColor));
         }
 
         return new Ansi.ColorCode.Rgb(color.RgbColor);
@@ -252,5 +248,107 @@ public sealed class Animation
                 FgColorCode = fgCode,
                 BgColorCode = bgCode,
             });
+    }
+
+    /// <summary>
+    /// Animation.adjust_color_brightness: hand-rolled RGB-&gt;HSL-&gt;RGB with
+    /// round() (banker's) at the end — unlike shift_color_towards's truncation.
+    /// </summary>
+    public static Color AdjustColorBrightness(Color color, double brightness)
+    {
+        static double HueToRgb(double lightnessScaled, double colorIntensity, double hueValue)
+        {
+            if (hueValue < 0.0)
+            {
+                hueValue += 1.0;
+            }
+
+            if (hueValue > 1.0)
+            {
+                hueValue -= 1.0;
+            }
+
+            if (hueValue < 1.0 / 6.0)
+            {
+                return lightnessScaled + (colorIntensity - lightnessScaled) * 6.0 * hueValue;
+            }
+
+            if (hueValue < 1.0 / 2.0)
+            {
+                return colorIntensity;
+            }
+
+            if (hueValue < 2.0 / 3.0)
+            {
+                return lightnessScaled + (colorIntensity - lightnessScaled) * (2.0 / 3.0 - hueValue) * 6.0;
+            }
+
+            return lightnessScaled;
+        }
+
+        (byte r, byte g, byte b) = color.RgbInts();
+        double normalizedRed = r / 255.0;
+        double normalizedGreen = g / 255.0;
+        double normalizedBlue = b / 255.0;
+
+        double maxVal = PyCompat.FMax(PyCompat.FMax(normalizedRed, normalizedGreen), normalizedBlue);
+        double minVal = PyCompat.FMin(PyCompat.FMin(normalizedRed, normalizedGreen), normalizedBlue);
+        double lightness = (maxVal + minVal) / 2.0;
+
+        double lightnessThreshold = 0.5;
+        double hueValue;
+        double saturation;
+        if (maxVal == minVal)
+        {
+            hueValue = 0.0;
+            saturation = 0.0;
+        }
+        else
+        {
+            double diff = maxVal - minVal;
+            saturation = lightness > lightnessThreshold
+                ? diff / (2.0 - maxVal - minVal)
+                : diff / (maxVal + minVal);
+            if (maxVal == normalizedRed)
+            {
+                hueValue = (normalizedGreen - normalizedBlue) / diff + (normalizedGreen < normalizedBlue ? 6.0 : 0.0);
+            }
+            else if (maxVal == normalizedGreen)
+            {
+                hueValue = (normalizedBlue - normalizedRed) / diff + 2.0;
+            }
+            else
+            {
+                hueValue = (normalizedRed - normalizedGreen) / diff + 4.0;
+            }
+
+            hueValue /= 6.0;
+        }
+
+        lightness = PyCompat.FMax(PyCompat.FMin(lightness * brightness, 1.0), 0.0);
+
+        double red;
+        double green;
+        double blue;
+        if (saturation == 0.0)
+        {
+            red = lightness;
+            green = lightness;
+            blue = lightness;
+        }
+        else
+        {
+            double colorIntensity = lightness < lightnessThreshold
+                ? lightness * (1.0 + saturation)
+                : lightness + saturation - lightness * saturation;
+            double lightnessScaled = 2.0 * lightness - colorIntensity;
+            red = HueToRgb(lightnessScaled, colorIntensity, hueValue + 1.0 / 3.0);
+            green = HueToRgb(lightnessScaled, colorIntensity, hueValue);
+            blue = HueToRgb(lightnessScaled, colorIntensity, hueValue - 1.0 / 3.0);
+        }
+
+        string adjusted =
+            $"{PyCompat.RoundHalfEven(red * 255.0):x2}{PyCompat.RoundHalfEven(green * 255.0):x2}{PyCompat.RoundHalfEven(blue * 255.0):x2}";
+        return Color.FromHex(adjusted);
     }
 }
