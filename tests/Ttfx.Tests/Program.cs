@@ -26,6 +26,7 @@ internal static class Program
         tests.AddRange(BouncyBallsEffectTests.All());
         tests.AddRange(ErrorCorrectEffectTests.All());
         tests.AddRange(ExpandEffectTests.All());
+        tests.AddRange(MiddleoutEffectTests.All());
         tests.AddRange(SignalsResizeTests.All());
 
         foreach (TestCase test in tests)

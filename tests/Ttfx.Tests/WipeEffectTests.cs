@@ -57,6 +57,7 @@ internal static class WipeEffectTests
         Harness.AssertTrue("bouncyballs factory", EffectRegistry.Find("bouncyballs")!.Factory is not null);
         Harness.AssertTrue("errorcorrect factory", EffectRegistry.Find("errorcorrect")!.Factory is not null);
         Harness.AssertTrue("expand factory", EffectRegistry.Find("expand")!.Factory is not null);
+        Harness.AssertTrue("middleout factory", EffectRegistry.Find("middleout")!.Factory is not null);
         Harness.AssertTrue("beams factory null", EffectRegistry.Find("beams")!.Factory is null);
     }
 

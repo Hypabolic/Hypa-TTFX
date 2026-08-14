@@ -84,6 +84,7 @@ middleout-anchored|paragraph.txt|--canvas-width 60 --canvas-height 20 --anchor-c
 middleout-basic|basic.txt|middleout
 middleout-dynamic|colored.txt|--existing-color-handling dynamic middleout
 middleout-horizontal|paragraph.txt|middleout --expand-direction horizontal --starting-color 00ff00 --center-movement-speed 0.3 --full-movement-speed 0.9 --center-easing out_bounce --full-easing in_quad
+middleout-unicode|unicode.txt|middleout
 # name|input|args   (each case runs with seeds 42 and 1337, max 400 frames)
 orbittingvolley-basic|basic.txt|orbittingvolley
 orbittingvolley-custom|paragraph.txt|orbittingvolley --top-launcher-symbol T --right-launcher-symbol R --bottom-launcher-symbol B --left-launcher-symbol L --launcher-movement-speed 1.4 --character-movement-speed 0.8 --volley-size 0.1 --launch-delay 10 --character-easing in_out_quad --final-gradient-direction vertical
