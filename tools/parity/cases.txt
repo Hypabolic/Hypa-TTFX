@@ -53,6 +53,11 @@ errorcorrect-heavy|paragraph.txt|errorcorrect --error-pairs 0.4 --swap-delay 2 -
 errorcorrect-xterm-anchored|paragraph.txt|--xterm-colors --canvas-width 60 --canvas-height 20 --anchor-canvas c --anchor-text c errorcorrect
 # 0007 unicode fixture: astral-plane + combining marks (one codepoint = one cell).
 errorcorrect-unicode|unicode.txt|errorcorrect
+expand-basic|basic.txt|expand
+expand-custom|paragraph.txt|expand --expand-easing out_bounce --movement-speed 0.8 --final-gradient-stops ff0000 00ff00 0000ff --final-gradient-steps 6 --final-gradient-direction horizontal
+expand-dynamic|colored.txt|--existing-color-handling dynamic expand
+expand-unicode|unicode.txt|expand
+expand-xterm-anchored|paragraph.txt|--xterm-colors --canvas-width 60 --canvas-height 20 --anchor-canvas c --anchor-text c expand
 fireworks-basic|basic.txt|fireworks
 fireworks-custom|paragraph.txt|fireworks --explode-anywhere --firework-colors ff0000 00ff00 0000ff --firework-symbol * --firework-volume 0.12 --launch-delay 10 --explode-distance 0.4 --final-gradient-direction diagonal
 fireworks-dynamic|colored.txt|--existing-color-handling dynamic fireworks
