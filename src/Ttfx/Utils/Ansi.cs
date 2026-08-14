@@ -9,8 +9,9 @@ namespace Ttfx.Utils;
 /// </summary>
 public static class Ansi
 {
-    public const string DecSaveCursor = "\x1b7";
-    public const string DecRestoreCursor = "\x1b8";
+    // C# \x consumes every following hex digit, so "\x1b7" is U+01B7, not ESC+'7'.
+    public const string DecSaveCursor = "\u001b7";
+    public const string DecRestoreCursor = "\u001b8";
     public const string HideCursor = "\x1b[?25l";
     public const string ShowCursor = "\x1b[?25h";
     public const string ResetAll = "\x1b[0m";
@@ -131,4 +132,7 @@ public static class Ansi
     public static void Fg(ColorCode code, StringBuilder outBuf) => SgrColor(code, 38, outBuf);
 
     public static void Bg(ColorCode code, StringBuilder outBuf) => SgrColor(code, 48, outBuf);
+
+    /// <summary>ansi::move_cursor_up — <c>\x1b[{n}A</c>, including n=0.</summary>
+    public static string MoveCursorUp(int n) => $"\x1b[{n}A";
 }

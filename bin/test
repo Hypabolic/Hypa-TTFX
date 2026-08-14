@@ -171,3 +171,7 @@ if [ ! -x "$ROOT/artifacts/ttfx" ]; then
 fi
 
 dotnet run --project tests/Ttfx.Tests -c Release --no-launch-profile
+
+"$ROOT/tools/tests/cli_corpus.sh"
+"$ROOT/tools/parity/wipe.sh"
+"$ROOT/tools/parity/tty_compare.sh"

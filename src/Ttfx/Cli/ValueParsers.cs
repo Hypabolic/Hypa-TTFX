@@ -313,6 +313,64 @@ public static class ValueParsers
 
     public static object ParseInputFile(string s) => s;
 
+    public static object ParseI64Object(string s) => ParseI64(s);
+
+    /// <summary>common.rs parse_gradient_steps: int &gt; 0.</summary>
+    public static object ParseGradientSteps(string s)
+    {
+        long v = ParseI64(s);
+        if (v > 0)
+        {
+            return v;
+        }
+
+        throw new UsageError($"{v} is not a valid value. Argument must be an int > 0.");
+    }
+
+    /// <summary>common.rs parse_non_negative_int: int &gt;= 0.</summary>
+    public static object ParseCommonNonNegativeInt(string s)
+    {
+        long v = ParseI64(s);
+        if (v >= 0)
+        {
+            return v;
+        }
+
+        throw new UsageError($"{v} is not a valid value. Argument must be an int >= 0.");
+    }
+
+    /// <summary>common.rs parse_gradient_direction.</summary>
+    public static object ParseGradientDirection(string s)
+    {
+        return s switch
+        {
+            "horizontal" => GradientDirection.Horizontal,
+            "vertical" => GradientDirection.Vertical,
+            "diagonal" => GradientDirection.Diagonal,
+            "radial" => GradientDirection.Radial,
+            _ => throw new UsageError($"invalid gradient direction: '{s}'"),
+        };
+    }
+
+    /// <summary>common.rs parse_character_group.</summary>
+    public static object ParseCharacterGroup(string s)
+    {
+        return s switch
+        {
+            "column_left_to_right" => CharacterGroup.ColumnLeftToRight,
+            "column_right_to_left" => CharacterGroup.ColumnRightToLeft,
+            "row_top_to_bottom" => CharacterGroup.RowTopToBottom,
+            "row_bottom_to_top" => CharacterGroup.RowBottomToTop,
+            "diagonal_top_left_to_bottom_right" => CharacterGroup.DiagonalTopLeftToBottomRight,
+            "diagonal_bottom_left_to_top_right" => CharacterGroup.DiagonalBottomLeftToTopRight,
+            "diagonal_top_right_to_bottom_left" => CharacterGroup.DiagonalTopRightToBottomLeft,
+            "diagonal_bottom_right_to_top_left" => CharacterGroup.DiagonalBottomRightToTopLeft,
+            "center_to_outside" => CharacterGroup.CenterToOutside,
+            "outside_to_center" => CharacterGroup.OutsideToCenter,
+            _ => throw new UsageError($"invalid character group: '{s}'"),
+        };
+    }
+
     private static bool TryParseU8(string s, out byte value)
     {
         value = 0;

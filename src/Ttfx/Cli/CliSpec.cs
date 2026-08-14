@@ -58,4 +58,5 @@ public sealed record OptionSpec(
     OptionArity Arity,
     string? Default,
     Func<string, object> Parse,
-    bool AllowNegative = false);
+    bool AllowNegative = false,
+    string[]? DefaultValues = null);

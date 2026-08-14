@@ -16,6 +16,18 @@ public interface IEffectHooks
     void DispatchCallback(EngineWorld world, CharId character, EffectCallback callback);
 }
 
+/// <summary>
+/// One effect: Build() once (upstream iterator __init__/build), then
+/// NextFrame() until null (upstream __next__/StopIteration). Every effect
+/// also implements IEffectHooks for its registered callbacks.
+/// Transcribed from <c>engine/effect.rs</c> Effect.
+/// </summary>
+public interface IEffect : IEffectHooks
+{
+    void Build(EngineWorld world);
+    string? NextFrame(EngineWorld world);
+}
+
 /// <summary>Hooks implementation for engine-internal use (no effect callbacks registered).</summary>
 public sealed class NoopHooks : IEffectHooks
 {
@@ -780,7 +792,7 @@ public sealed class EngineWorld
     {
         if (Clock is Clock.Real && Terminal.Config.FrameRate != 0)
         {
-            // enforce_framerate is issue 0012; frame_rate 0 is the parity case.
+            Terminal.EnforceFramerate();
         }
 
         Clock.AdvanceFrame();

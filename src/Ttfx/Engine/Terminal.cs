@@ -1,7 +1,11 @@
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Text;
+using System.Threading;
 using Ttfx.Cli;
 using Ttfx.Utils;
 
@@ -140,6 +144,9 @@ public sealed class Terminal
     private readonly List<int> _visiblePositions;
     private uint[] _renderCells = [];
     private readonly ArrayBufferWriter<byte> _outputBuffer = new ArrayBufferWriter<byte>();
+    private readonly byte[] _moveCursorToTop;
+    private readonly long _frameRate;
+    private long _lastTimePrinted;
 
     private Terminal(
         TerminalConfig config,
@@ -172,6 +179,17 @@ public sealed class Terminal
         {
             _visiblePositions.Add(NotVisible);
         }
+
+        long visibleTop = layout.VisibleTop;
+        if (visibleTop < 0)
+        {
+            visibleTop = 0;
+        }
+
+        _moveCursorToTop = Encoding.UTF8.GetBytes(
+            Ansi.DecRestoreCursor + Ansi.DecSaveCursor + Ansi.MoveCursorUp((int)visibleTop));
+        _frameRate = config.FrameRate;
+        _lastTimePrinted = Stopwatch.GetTimestamp();
     }
 
     public static Terminal New(string inputData, TerminalConfig config)
@@ -1054,5 +1072,88 @@ public sealed class Terminal
         }
 
         return result;
+    }
+
+    // --- tty side (upstream's second Terminal instance) ---
+
+    /// <summary>
+    /// prep_canvas: hide cursor, optionally reposition for --reuse-canvas,
+    /// scroll blank rows for the visible area, DEC save.
+    /// Transcribed from <c>engine/terminal.rs</c>.
+    /// </summary>
+    public void PrepCanvas(Stream output)
+    {
+        output.Write(Encoding.UTF8.GetBytes(Ansi.HideCursor));
+        if (Config.ReuseCanvas)
+        {
+            WriteMoveCursorToTop(output);
+        }
+
+        long width = VisibleRight;
+        if (width < 0)
+        {
+            width = 0;
+        }
+
+        byte[] blank = Encoding.UTF8.GetBytes(new string(' ', (int)width));
+        for (long i = 0; i < VisibleTop; i++)
+        {
+            output.Write(blank);
+            output.Write("\n"u8);
+        }
+
+        output.Write(Encoding.UTF8.GetBytes(Ansi.DecSaveCursor));
+    }
+
+    /// <summary>
+    /// restore_cursor: honour --no-eol / --no-restore-cursor.
+    /// Transcribed from <c>engine/terminal.rs</c>.
+    /// </summary>
+    public void RestoreCursor(Stream output, string endSymbol)
+    {
+        string end = Config.NoEol ? "" : endSymbol;
+        if (!Config.NoRestoreCursor)
+        {
+            output.Write(Encoding.UTF8.GetBytes(Ansi.ShowCursor));
+        }
+
+        if (end.Length > 0)
+        {
+            output.Write(Encoding.UTF8.GetBytes(end));
+        }
+    }
+
+    /// <summary>
+    /// print_frame: move_cursor_to_top + output_string bytes + flush.
+    /// Transcribed from <c>engine/terminal.rs</c>.
+    /// </summary>
+    public void PrintFrame(Stream output, string outputString)
+    {
+        WriteMoveCursorToTop(output);
+        output.Write(Encoding.UTF8.GetBytes(outputString));
+        output.Flush();
+    }
+
+    private void WriteMoveCursorToTop(Stream output) => output.Write(_moveCursorToTop);
+
+    /// <summary>
+    /// Terminal.enforce_framerate: sleep off the remainder; timestamp taken
+    /// AFTER the sleep (drift accumulates, faithfully).
+    /// </summary>
+    public void EnforceFramerate()
+    {
+        if (_frameRate == 0)
+        {
+            return;
+        }
+
+        double frameDelay = 1.0 / _frameRate;
+        double elapsed = (Stopwatch.GetTimestamp() - _lastTimePrinted) / (double)Stopwatch.Frequency;
+        if (elapsed < frameDelay)
+        {
+            Thread.Sleep(TimeSpan.FromSeconds(frameDelay - elapsed));
+        }
+
+        _lastTimePrinted = Stopwatch.GetTimestamp();
     }
 }

@@ -101,11 +101,25 @@ public static class CliParser
             EffectSpec effect = EffectRegistry.Find(effectName)!;
             foreach (OptionSpec spec in effect.Options)
             {
-                if (spec.Default is not null
-                    && spec.Arity.Kind == OptionArityKind.One
-                    && !effectOptions.ContainsKey(spec.Long))
+                if (effectOptions.ContainsKey(spec.Long))
+                {
+                    continue;
+                }
+
+                if (spec.Default is not null && spec.Arity.Kind == OptionArityKind.One)
                 {
                     effectOptions[spec.Long] = spec.Parse(spec.Default);
+                }
+                else if (spec.Arity.Kind == OptionArityKind.AtLeastOne
+                    && spec.DefaultValues is { Length: > 0 })
+                {
+                    var list = new List<object>(spec.DefaultValues.Length);
+                    foreach (string value in spec.DefaultValues)
+                    {
+                        list.Add(spec.Parse(value));
+                    }
+
+                    effectOptions[spec.Long] = list;
                 }
             }
         }

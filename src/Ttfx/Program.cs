@@ -1,10 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
-using System.Reflection;
 using System.Text;
 using Ttfx.Cli;
 using Ttfx.Effects;
 using Ttfx.Engine;
+using Ttfx.Utils;
 
 namespace Ttfx;
 
@@ -99,7 +100,7 @@ internal static class Program
 
         if (root.RandomEffect)
         {
-            if (CountFilteredEffects(root) == 0)
+            if (FilteredEffectNames(root).Count == 0)
             {
                 Console.Error.WriteLine("Error: No effects available after filtering.");
                 return 1;
@@ -121,6 +122,72 @@ internal static class Program
         {
             Console.Error.WriteLine($"Error: Unsupported ANSI sequence in input data: {ex.Sequence}");
             return 1;
+        }
+        catch (EngineException ex)
+        {
+            Console.Error.WriteLine($"Error: {ex.Message}");
+            return 1;
+        }
+
+        Rng rng = root.Seed is ulong seed ? Rng.Seeded(seed) : Rng.FromEntropy();
+
+        IEffect effect;
+        if (root.RandomEffect)
+        {
+            List<string> names = FilteredEffectNames(root);
+            string name = names[rng.ChoiceIndex(names.Count)];
+            ParseResult defaultsOnly = CliParser.Parse([name]);
+            EffectSpec spec = EffectRegistry.Find(name)!;
+            if (spec.Factory is null)
+            {
+                Console.Error.WriteLine($"Error: failed to build effect '{name}'.");
+                return 1;
+            }
+
+            effect = spec.Factory(defaultsOnly.EffectOptions);
+        }
+        else
+        {
+            EffectSpec spec = EffectRegistry.Find(parsed.EffectName!)!;
+            if (spec.Factory is null)
+            {
+                Console.Error.WriteLine($"Error: failed to build effect '{parsed.EffectName}'.");
+                return 1;
+            }
+
+            effect = spec.Factory(parsed.EffectOptions);
+        }
+
+        Clock clock = root.ParityDump || root.VirtualClock
+            ? Clock.VirtualWithFrameRate(root.FrameRate)
+            : Clock.MakeReal();
+
+        EngineWorld world;
+        try
+        {
+            world = EngineWorld.New(inputData, TerminalConfig.FromRoot(root), rng, clock);
+        }
+        catch (UnsupportedAnsiException ex)
+        {
+            Console.Error.WriteLine($"Error: Unsupported ANSI sequence in input data: {ex.Sequence}");
+            return 1;
+        }
+        catch (EngineException ex)
+        {
+            Console.Error.WriteLine($"Error: {ex.Message}");
+            return 1;
+        }
+
+        try
+        {
+            if (root.ParityDump)
+            {
+                EffectRunner.DumpEffect(effect, world, root.MaxFrames);
+            }
+            else
+            {
+                EffectRunner.RunEffect(effect, world);
+            }
         }
         catch (EngineException ex)
         {
@@ -186,9 +253,9 @@ internal static class Program
         return StrictUtf8.GetString(ms.ToArray());
     }
 
-    private static int CountFilteredEffects(RootOptions root)
+    private static List<string> FilteredEffectNames(RootOptions root)
     {
-        int available = 0;
+        var names = new List<string>();
         foreach (EffectSpec spec in EffectRegistry.Effects)
         {
             if (root.IncludeEffects.Count > 0 && !ContainsOrdinal(root.IncludeEffects, spec.Name))
@@ -201,10 +268,10 @@ internal static class Program
                 continue;
             }
 
-            available++;
+            names.Add(spec.Name);
         }
 
-        return available;
+        return names;
     }
 
     private static bool ContainsOrdinal(System.Collections.Generic.List<string> items, string name)

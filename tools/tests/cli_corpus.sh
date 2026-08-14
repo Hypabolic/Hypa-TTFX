@@ -4,8 +4,14 @@
 # unsupported-ANSI on STDERR; 2 usage errors).
 set -u
 cd "$(dirname "$0")/../.."
-RUST=./target/release/ttfx
+RUST=./artifacts/ttfx
 export COLUMNS=80 LINES=24
+export PATH="/usr/local/bin:${PATH:-}"
+export DOTNET_ROOT="${DOTNET_ROOT:-/usr/local/Cellar/dotnet/10.0.400/libexec}"
+if [ ! -x "$RUST" ]; then
+  echo "cli_corpus: $RUST is missing. Run bin/build first." >&2
+  exit 1
+fi
 pass=0; fail=0; failed=()
 
 check() {
