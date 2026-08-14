@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Publish the Native-AOT ttfx binary to artifacts/ttfx.
+# With no argument, publishes the host RID (detected from 'dotnet --info').
+set -euo pipefail
+
+ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+cd "$ROOT"
+
+usage() {
+  echo "usage: bin/build [rid]" >&2
+  echo "  no argument: publish the host RID (from 'dotnet --info')" >&2
+}
+
+if [ "$#" -gt 1 ]; then
+  usage
+  exit 2
+fi
+
+if [ "$#" -eq 1 ]; then
+  rid="$1"
+else
+  rid="$(dotnet --info | awk -F': *' '/^[[:space:]]*RID:/{gsub(/[[:space:]]/, "", $2); print $2; exit}')"
+  if [ -z "$rid" ]; then
+    echo "bin/build: could not detect host RID from 'dotnet --info'" >&2
+    exit 1
+  fi
+fi
+
+dotnet publish src/Ttfx -c Release -r "$rid" -o "$ROOT/artifacts"
+
+echo "Published $ROOT/artifacts/ttfx ($rid)"

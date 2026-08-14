@@ -1259,11 +1259,11 @@ Startup: expect 1–5 ms AOT vs 0.5 ms Rust vs ~65 ms Python. Measure it; do not
     pack;
   - clang and the system linker; on Linux the developer packages Native AOT links against
     (zlib headers among them); on macOS the Xcode Command Line Tools;
-  - **`objcopy` or `llvm-objcopy`**, required by `StripSymbols=true` — *this machine has
-    neither*, so an AOT publish here would fail on the strip step today. What was verified
-    locally is that the SDK and the NativeAOT runtime pack are installed; a successful publish
-    was **not** verified. Either install binutils/llvm or drop `StripSymbols` — decide in M0
-    when the first publish runs.
+  - **`StripSymbols=true` stays on.** A first AOT publish with `StripSymbols=true` on this
+    Mac **succeeded** without `objcopy` or `llvm-objcopy`. .NET 10 ILC on Apple platforms
+    strips with `dsymutil` + `strip` (Xcode CLT), not `objcopy`; GNU binutils `objcopy` is
+    the wrong tool for Mach-O anyway. `objcopy`/`llvm-objcopy` remain a Linux prerequisite
+    only. Do not install Homebrew llvm/binutils for this.
   - bash, python3, and pty support for the harness; `zsh` only if the completion check
     (§4.5) runs, which is otherwise skipped with a notice rather than failing;
   - **`cargo`, `rustc`, and `git`, plus network access** — `fetch_reference.sh` clones and
