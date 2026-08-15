@@ -50,10 +50,10 @@ public sealed class Segment
 public sealed class Path
 {
     public string PathId { get; }
-    public double Speed { get; }
+    public double Speed { get; set; }
     public Easing? Ease { get; }
     public long? Layer { get; }
-    public long HoldTime { get; }
+    public long HoldTime { get; set; }
     public bool Loop { get; }
     public List<Segment> Segments { get; } = new List<Segment>();
     public List<Waypoint> Waypoints { get; } = new List<Waypoint>();

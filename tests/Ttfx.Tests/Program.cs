@@ -31,11 +31,13 @@ internal static class Program
         tests.AddRange(PrintEffectTests.All());
         tests.AddRange(OverflowEffectTests.All());
         tests.AddRange(OrbittingVolleyEffectTests.All());
+        tests.AddRange(LaserEtchEffectTests.All());
         tests.AddRange(HighlightEffectTests.All());
         tests.AddRange(FireworksEffectTests.All());
         tests.AddRange(DecryptEffectTests.All());
         tests.AddRange(CrumbleEffectTests.All());
         tests.AddRange(ColorShiftEffectTests.All());
+        tests.AddRange(BurnEffectTests.All());
         tests.AddRange(BubblesEffectTests.All());
         tests.AddRange(BlackholeEffectTests.All());
         tests.AddRange(BinaryPathEffectTests.All());
@@ -44,13 +46,18 @@ internal static class Program
         tests.AddRange(BouncyBallsEffectTests.All());
         tests.AddRange(ErrorCorrectEffectTests.All());
         tests.AddRange(ExpandEffectTests.All());
+        tests.AddRange(MatrixEffectTests.All());
         tests.AddRange(MiddleoutEffectTests.All());
         tests.AddRange(PourEffectTests.All());
         tests.AddRange(RainEffectTests.All());
         tests.AddRange(RandomSequenceEffectTests.All());
         tests.AddRange(ScatteredEffectTests.All());
+        tests.AddRange(SmokeEffectTests.All());
         tests.AddRange(SliceEffectTests.All());
         tests.AddRange(SlideEffectTests.All());
+        tests.AddRange(SynthGridEffectTests.All());
+        tests.AddRange(ThunderstormEffectTests.All());
+        tests.AddRange(VhsTapeEffectTests.All());
         tests.AddRange(SprayEffectTests.All());
         tests.AddRange(SignalsResizeTests.All());
 

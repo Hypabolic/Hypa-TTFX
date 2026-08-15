@@ -207,7 +207,7 @@ public sealed class Scene
     public string SceneId { get; }
     public bool IsLooping { get; set; }
     public SyncMetric? Sync { get; set; }
-    public Easing? Ease { get; }
+    public Easing? Ease { get; set; }
     public bool NoColor { get; }
     public bool UseXtermColors { get; }
 

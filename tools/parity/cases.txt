@@ -32,6 +32,7 @@ burn-basic|basic.txt|burn
 burn-custom|paragraph.txt|burn --starting-color 404040 --burn-colors ff0000 ffa500 ffff00 --smoke-chance 1.0 --final-gradient-stops 00ff00 0000ff --final-gradient-steps 8 --final-gradient-direction horizontal
 burn-dynamic|colored.txt|--existing-color-handling dynamic burn
 burn-nosmoke|basic.txt|burn --smoke-chance 0.0
+burn-unicode|unicode.txt|burn
 burn-xterm-anchored|paragraph.txt|--xterm-colors --canvas-width 60 --canvas-height 20 --anchor-canvas c --anchor-text c burn
 colorshift-basic|basic.txt|colorshift
 colorshift-custom|paragraph.txt|colorshift --gradient-stops ff0000 00ff00 0000ff --gradient-steps 6 --gradient-frames 3 --no-loop --travel-direction horizontal --reverse-travel-direction --cycles 1 --final-gradient-direction diagonal
@@ -82,12 +83,14 @@ laseretch-fast|paragraph.txt|laseretch --etch-speed 3 --etch-delay 0 --cool-grad
 laseretch-group-quirk|basic.txt|laseretch --etch-pattern row_top_to_bottom
 laseretch-single|single.txt|laseretch
 laseretch-xterm-anchored|paragraph.txt|--xterm-colors --canvas-width 60 --canvas-height 20 --anchor-canvas c --anchor-text c laseretch --etch-speed 4 --etch-delay 0
+laseretch-unicode|unicode.txt|laseretch
 matrix-basic|basic.txt|matrix
 matrix-custom|paragraph.txt|matrix --rain-time 2 --highlight-color ffffff --rain-color-gradient ff0000 00ff00 --rain-symbols a b c 1 2 3 --rain-fall-delay-range 1-5 --rain-column-delay-range 2-4 --symbol-swap-chance 0.05 --color-swap-chance 0.02 --resolve-delay 1 --final-gradient-stops ff0000 0000ff --final-gradient-steps 8 --final-gradient-frames 2 --final-gradient-direction vertical
 matrix-dynamic|colored.txt|--existing-color-handling dynamic matrix --rain-time 1
 matrix-short|basic.txt|matrix --rain-time 1
 matrix-single|single.txt|matrix --rain-time 1
 matrix-xterm-anchored|paragraph.txt|--xterm-colors --canvas-width 60 --canvas-height 20 --anchor-canvas c --anchor-text c matrix --rain-time 2
+matrix-unicode|unicode.txt|matrix --rain-time 1
 middleout-always-xterm|colored.txt|--existing-color-handling always --xterm-colors middleout
 middleout-anchored|paragraph.txt|--canvas-width 60 --canvas-height 20 --anchor-canvas c --anchor-text c middleout --expand-direction horizontal
 middleout-basic|basic.txt|middleout
@@ -162,6 +165,7 @@ smoke-custom|paragraph.txt|smoke --starting-color 333333 --smoke-symbols + @ % -
 smoke-dynamic|colored.txt|--existing-color-handling dynamic smoke
 smoke-wholecanvas|basic.txt|smoke --use-whole-canvas
 smoke-xterm-anchored|paragraph.txt|--xterm-colors --canvas-width 60 --canvas-height 20 --anchor-canvas c --anchor-text c smoke
+smoke-unicode|unicode.txt|smoke
 spotlights-unicode|unicode.txt|spotlights --search-duration 60
 spotlights-always-xterm|colored.txt|--existing-color-handling always --xterm-colors spotlights --search-duration 50
 spotlights-anchored|paragraph.txt|--canvas-width 60 --canvas-height 20 --anchor-canvas c --anchor-text c spotlights --search-duration 60
@@ -193,10 +197,12 @@ synthgrid-basic|basic.txt|synthgrid
 synthgrid-custom|paragraph.txt|synthgrid --grid-gradient-stops CC00CC ffffff --grid-gradient-steps 6 --grid-gradient-direction horizontal --text-gradient-stops ff0000 00ff00 --text-gradient-steps 8 --text-gradient-direction diagonal --grid-row-symbol = --grid-column-symbol : --text-generation-symbols # @ % --max-active-blocks 0.5
 synthgrid-dynamic|colored.txt|--existing-color-handling dynamic synthgrid
 synthgrid-single|single.txt|synthgrid
+synthgrid-unicode|unicode.txt|synthgrid
 thunderstorm-basic|basic.txt|thunderstorm --storm-time 2
 thunderstorm-custom|paragraph.txt|thunderstorm --storm-time 3 --text-glow-time 1 --spark-glow-time 1 --lightning-color ffff00
 thunderstorm-dynamic|colored.txt|--existing-color-handling dynamic thunderstorm --storm-time 2
 thunderstorm-xterm-anchored|paragraph.txt|--xterm-colors --canvas-width 60 --canvas-height 20 --anchor-canvas c thunderstorm --storm-time 2
+thunderstorm-unicode|unicode.txt|thunderstorm --storm-time 2
 unstable-unicode|unicode.txt|unstable
 unstable-always-xterm|colored.txt|--existing-color-handling always --xterm-colors unstable
 unstable-anchored|paragraph.txt|--canvas-width 60 --canvas-height 20 --anchor-canvas c --anchor-text c unstable
@@ -208,6 +214,7 @@ vhstape-basic|basic.txt|vhstape
 vhstape-dynamic|colored.txt|--existing-color-handling dynamic vhstape --total-glitch-time 150
 vhstape-fast|paragraph.txt|vhstape --total-glitch-time 200 --glitch-line-chance 0.1 --noise-chance 0.01
 vhstape-xterm-anchored|paragraph.txt|--xterm-colors --canvas-width 60 --canvas-height 20 --anchor-canvas c --anchor-text c vhstape --total-glitch-time 150
+vhstape-unicode|unicode.txt|vhstape --total-glitch-time 150
 waves-unicode|unicode.txt|waves
 waves-basic|basic.txt|waves
 waves-center|paragraph.txt|waves --wave-direction center_to_outside --wave-count 1
