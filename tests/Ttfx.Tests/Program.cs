@@ -27,6 +27,13 @@ internal static class Program
         tests.AddRange(ErrorCorrectEffectTests.All());
         tests.AddRange(ExpandEffectTests.All());
         tests.AddRange(MiddleoutEffectTests.All());
+        tests.AddRange(PourEffectTests.All());
+        tests.AddRange(RainEffectTests.All());
+        tests.AddRange(RandomSequenceEffectTests.All());
+        tests.AddRange(ScatteredEffectTests.All());
+        tests.AddRange(SliceEffectTests.All());
+        tests.AddRange(SlideEffectTests.All());
+        tests.AddRange(SprayEffectTests.All());
         tests.AddRange(SignalsResizeTests.All());
 
         foreach (TestCase test in tests)

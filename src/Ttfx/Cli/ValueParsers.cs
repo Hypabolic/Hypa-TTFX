@@ -191,6 +191,33 @@ public static class ValueParsers
     /// <summary>common.rs parse_positive_float: float &gt; 0, boxed for OptionSpec.</summary>
     public static object ParsePositiveFloat(string s) => PositiveFloat(s);
 
+    /// <summary>common.rs parse_positive_float_range: "0.25-0.5".</summary>
+    public static object ParsePositiveFloatRange(string s)
+    {
+        int dash = s.IndexOf('-', StringComparison.Ordinal);
+        if (dash < 0)
+        {
+            throw new UsageError($"invalid range: '{s}'");
+        }
+
+        string aStr = s.Substring(0, dash);
+        string bStr = s.Substring(dash + 1);
+        if (!TryParseF64(aStr, out double a) || !TryParseF64(bStr, out double b))
+        {
+            throw new UsageError($"invalid range: '{s}'");
+        }
+
+        if (a > 0.0 && a <= b)
+        {
+            return (a, b);
+        }
+
+        throw new UsageError($"invalid range: '{s}'");
+    }
+
+    /// <summary>common.rs parse_positive_ratio: 0 &lt; n &lt;= 1, boxed for OptionSpec.</summary>
+    public static object ParsePositiveRatio(string s) => PositiveRatio(s);
+
     public static double NonNegativeFloat(string s)
     {
         double v = ParseF64(s);
