@@ -20,6 +20,8 @@ internal static class Program
         tests.AddRange(RngVectors.All());
         tests.AddRange(EasingGeometryGoldens.All());
         tests.AddRange(EngineTraces.All());
+        tests.AddRange(RebuildAfterTests.All());
+        tests.AddRange(MultiValueOptionTests.All());
         tests.AddRange(TerminalGroupingTests.All());
         tests.AddRange(TickMachineryTests.All());
         tests.AddRange(WavesEffectTests.All());

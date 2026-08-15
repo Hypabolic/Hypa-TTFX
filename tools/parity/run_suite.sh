@@ -1,16 +1,7 @@
 #!/usr/bin/env bash
-# Effect parity: bounded (400) and unbounded-to-completion dumps vs the Rust
-# oracle, at seeds 42 and 1337, for every ${PREFIX}-* line in cases.txt.
-# A matching prefix is not a pass — full dumps and frames=N must match.
+# Full effect parity suite: bounded (400) and unbounded dumps vs the Rust oracle
+# for every case in cases.txt. Optional filter argument matches case name substring.
 set -uo pipefail
-
-if [ "$#" -lt 1 ] || [ -z "${1:-}" ]; then
-  echo "usage: effect.sh PREFIX" >&2
-  echo "  PREFIX is the cases.txt name prefix (wipe, bouncyballs, ...)" >&2
-  exit 2
-fi
-
-PREFIX="$1"
 
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)"
 cd "$ROOT"
@@ -20,9 +11,11 @@ source "$ROOT/tools/parity/reference.sh"
 
 BIN="$ROOT/artifacts/ttfx"
 if [ ! -x "$BIN" ]; then
-  echo "effect.sh: $BIN is missing. Run bin/build first." >&2
+  echo "run_suite.sh: $BIN is missing. Run bin/build first." >&2
   exit 1
 fi
+
+FILTER="${1:-}"
 
 export COLUMNS=80 LINES=24
 export PATH="/usr/local/bin:${PATH:-}"
@@ -63,7 +56,7 @@ run_pair() {
   fi
   if [ "$ref_rc" -ge 124 ]; then
     fail=$((fail + 1))
-    failed+=("$label (watchdog tripped ref=$ref_rc)")
+    failed+=("$label (watchdog ref=$ref_rc)")
     return
   fi
   if ! cmp -s "$tmp/ref.dump" "$tmp/ours.dump"; then
@@ -85,7 +78,7 @@ run_pair() {
 while IFS='|' read -r name input args; do
   [ -z "${name:-}" ] && continue
   case "$name" in \#*) continue ;; esac
-  case "$name" in "${PREFIX}"-*) ;; *) continue ;; esac
+  if [ -n "$FILTER" ] && [[ "$name" != *"$FILTER"* ]]; then continue; fi
 
   skip_unbounded=0
   case " $args " in
@@ -93,7 +86,6 @@ while IFS='|' read -r name input args; do
   esac
 
   for seed in 42 1337; do
-    # word-split $args the same way run_suite.sh does
     # shellcheck disable=SC2086
     run_pair "$name seed=$seed bounded" "$inputs/$input" 0 --seed "$seed" --max-frames 400 $args
     if [ "$skip_unbounded" -eq 0 ]; then
@@ -103,7 +95,7 @@ while IFS='|' read -r name input args; do
   done
 done < "$ROOT/tools/parity/cases.txt"
 
-echo "${PREFIX} parity: $pass passed, $fail failed"
+echo "run_suite: $pass passed, $fail failed"
 if [ "$fail" -gt 0 ]; then
   printf 'FAILED: %s\n' "${failed[@]}"
   exit 1

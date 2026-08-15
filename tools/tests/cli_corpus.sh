@@ -51,5 +51,38 @@ check success 0 bash -c "printf 'hi' | $RUST --parity-dump --seed 1 --max-frames
 check success-negative-canvas 0 bash -c "printf 'hi' | $RUST --canvas-width -1 --parity-dump --seed 1 --max-frames 2 wipe"
 check success-multi-stops 0 bash -c "printf 'hi' | $RUST --parity-dump --seed 1 --max-frames 2 wipe --final-gradient-stops ff0000 00ff00 0000ff"
 
+# --version / -v
+check version-long 0 bash -c "$RUST --version | grep -q '^ttfx '"
+check version-short 0 bash -c "$RUST -v | grep -q '^ttfx '"
+
+# --print-completion: non-empty, syntax-valid, mentions all 37 effects
+$RUST --print-completion bash > /tmp/claude-cli-bash 2>/tmp/claude-cli-err
+if [ -s /tmp/claude-cli-bash ] && bash -n /tmp/claude-cli-bash 2>/dev/null; then
+  pass=$((pass+1))
+else
+  fail=$((fail+1)); failed+=("bash-completion-syntax")
+fi
+for effect in beams binarypath blackhole bouncyballs bubbles burn colorshift crumble decrypt errorcorrect expand fireworks highlight laseretch matrix middleout orbittingvolley overflow pour print rain randomsequence rings scattered slice slide smoke spotlights spray swarm sweep synthgrid thunderstorm unstable vhstape waves wipe; do
+  grep -q "$effect" /tmp/claude-cli-bash && pass=$((pass+1)) || { fail=$((fail+1)); failed+=("bash-missing-$effect"); }
+done
+$RUST --print-completion zsh > /tmp/claude-cli-zsh 2>/tmp/claude-cli-err
+if [ -s /tmp/claude-cli-zsh ]; then
+  if command -v zsh >/dev/null 2>&1; then
+    if zsh -n /tmp/claude-cli-zsh 2>/dev/null; then pass=$((pass+1)); else fail=$((fail+1)); failed+=("zsh-completion-syntax"); fi
+  else
+    echo "cli_corpus: zsh not installed; skipping zsh -n" >&2
+    pass=$((pass+1))
+  fi
+  for effect in beams binarypath blackhole bouncyballs bubbles burn colorshift crumble decrypt errorcorrect expand fireworks highlight laseretch matrix middleout orbittingvolley overflow pour print rain randomsequence rings scattered slice slide smoke spotlights spray swarm sweep synthgrid thunderstorm unstable vhstape waves wipe; do
+    grep -q "$effect" /tmp/claude-cli-zsh && pass=$((pass+1)) || { fail=$((fail+1)); failed+=("zsh-missing-$effect"); }
+  done
+else
+  fail=$((fail+1)); failed+=("zsh-completion-empty")
+fi
+
+# --random-effect filtering
+check random-empty-filter 1 bash -c "printf x | $RUST --random-effect --include-effects nosucheffect"
+check random-filter 0 bash -c "printf 'hi' | $RUST --parity-dump --seed 42 --max-frames 3 --random-effect --include-effects wipe beams"
+
 echo "cli corpus: $pass passed, $fail failed"
 if [ $fail -gt 0 ]; then printf 'FAILED: %s\n' "${failed[@]}"; exit 1; fi

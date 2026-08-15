@@ -7,15 +7,18 @@ namespace Ttfx.Tests;
 
 /// <summary>
 /// Engine state-machine traces vs the reference fixture
-/// (tests/Ttfx.Tests/fixtures/engine_traces.txt). Each scenario replays
-/// identically and the full event + state log must match line for line.
-/// Transcribed from <c>tests/engine_traces.rs</c>.
+/// (tests/Ttfx.Tests/fixtures/engine_traces.txt). Scenarios transcribed from
+/// <c>tests/engine_traces.rs</c> are reference-verified. The path-reactivation
+/// and scene-overwrite scenarios at the end of the fixture are C# self-consistency
+/// checks only — they have no Rust counterpart in engine_traces.rs; they guard
+/// rebase/overwrite behavior transcribed from ctx.rs but are not oracle-verified.
 /// </summary>
 internal static class EngineTraces
 {
     internal static IEnumerable<TestCase> All()
     {
         yield return new TestCase("engine_traces.txt state-machine traces", EngineTracesMatchPython);
+        yield return new TestCase("duplicate event registration rejects equal payload", DuplicateEventRegistrationTest);
     }
 
     private static EngineWorld MakeCtx()
@@ -318,6 +321,72 @@ internal static class EngineTraces
         Flush(world, log);
     }
 
+    /// <summary>
+    /// Self-consistency only (no Rust engine_traces.rs scenario). Exercises
+    /// path re-activation rebase from EngineWorld.ActivatePath / ctx.rs.
+    /// </summary>
+    private static void ScenarioPathReactivation(List<string> log)
+    {
+        log.Add("=== scenario_path_reactivation ===");
+        EngineWorld world = MakeCtx();
+        List<CharId> ids = Chars(world, 1);
+        CharId a = ids[0];
+        {
+            Motion motion = world.Terminal.Arena[(int)a.Value].Motion;
+            motion.NewPath(1.0, null, null, 0, false, "move");
+            motion.Paths.Get("move")!.NewWaypoint(Coord.New(12, 4), null, "");
+        }
+
+        world.ActivatePath(NoopHooks.Instance, a, "move");
+        RunTicks(world, log, ids, 3, 0);
+        world.ActivatePath(NoopHooks.Instance, a, "move");
+        RunTicks(world, log, ids, 8, 3);
+        Flush(world, log);
+    }
+
+    /// <summary>
+    /// Self-consistency only (no Rust engine_traces.rs scenario). Exercises
+    /// Animation.NewScene silent overwrite (faithful to upstream).
+    /// </summary>
+    private static void ScenarioSceneOverwrite(List<string> log)
+    {
+        log.Add("=== scenario_scene_overwrite ===");
+        EngineWorld world = MakeCtx();
+        List<CharId> ids = Chars(world, 1);
+        CharId a = ids[0];
+        {
+            EffectCharacter ch = world.Terminal.Arena[(int)a.Value];
+            bool uses = ch.UsesInputPreexistingColors;
+            ch.Animation.NewScene(false, null, null, "dup", uses);
+            ch.Animation.Scenes.Get("dup")!.AddFrame("A", 2, new VisualParams());
+            ch.Animation.NewScene(false, null, null, "dup", uses);
+            ch.Animation.Scenes.Get("dup")!.AddFrame("B", 2, new VisualParams());
+        }
+
+        world.ActivateScene(NoopHooks.Instance, a, "dup");
+        RunTicks(world, log, ids, 6, 0);
+        Flush(world, log);
+    }
+
+    private static void ScenarioDuplicateEventRegistration()
+    {
+        EngineWorld world = MakeCtx();
+        List<CharId> ids = Chars(world, 1);
+        CharId a = ids[0];
+        world.Terminal.Arena[(int)a.Value].Motion.NewPath(1.0, null, null, 0, false, "p");
+        world.Terminal.Arena[(int)a.Value].Motion.Paths.Get("p")!.NewWaypoint(Coord.New(5, 5), null, "");
+        var action = new EventAction.SetLayer(3);
+        world.RegisterEvent(a, Event.PathComplete, new CallerKey.Path("p"), action);
+        Harness.AssertThrows<EngineException>(
+            "duplicate equal payload",
+            () => world.RegisterEvent(a, Event.PathComplete, new CallerKey.Path("p"), action));
+    }
+
+    internal static void DuplicateEventRegistrationTest()
+    {
+        ScenarioDuplicateEventRegistration();
+    }
+
     private static void EngineTracesMatchPython()
     {
         string fixture = System.IO.File.ReadAllText(
@@ -335,6 +404,8 @@ internal static class EngineTraces
         ScenarioScenes(log);
         ScenarioSyncedScene(log);
         ScenarioSceneEventsAndResume(log);
+        ScenarioPathReactivation(log);
+        ScenarioSceneOverwrite(log);
 
         int mismatches = 0;
         int limit = Math.Max(expected.Length, log.Count);

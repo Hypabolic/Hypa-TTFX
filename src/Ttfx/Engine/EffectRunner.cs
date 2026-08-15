@@ -27,14 +27,15 @@ public static class EffectRunner
     /// <summary>
     /// Parity mode: write length-prefixed frames to stdout, no tty escapes.
     /// <c>--max-frames 0</c> still emits one frame (emit before checking the limit).
+    /// Returns frame count and whether the effect reported completion.
     /// </summary>
-    public static ulong DumpEffect(IEffect effect, EngineWorld world, ulong? maxFrames)
+    public static (ulong Count, bool Complete) DumpEffect(IEffect effect, EngineWorld world, ulong? maxFrames)
     {
         using Stream stdout = StdIo.OpenStdout();
         return DumpEffect(effect, world, maxFrames, stdout, Console.Error);
     }
 
-    internal static ulong DumpEffect(
+    internal static (ulong Count, bool Complete) DumpEffect(
         IEffect effect,
         EngineWorld world,
         ulong? maxFrames,
@@ -43,11 +44,13 @@ public static class EffectRunner
     {
         effect.Build(world);
         ulong count = 0;
+        bool complete = false;
         while (true)
         {
             string? frame = effect.NextFrame(world);
             if (frame is null)
             {
+                complete = true;
                 break;
             }
 
@@ -68,7 +71,7 @@ public static class EffectRunner
         stderr.Write("frames=");
         stderr.Write(count.ToString(CultureInfo.InvariantCulture));
         stderr.Write('\n');
-        return count;
+        return (count, complete);
     }
 
     /// <summary>

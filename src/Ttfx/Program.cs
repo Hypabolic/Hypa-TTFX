@@ -50,6 +50,7 @@ internal static class Program
 
         if (root.PrintCompletion is not null)
         {
+            Completions.Print(root.PrintCompletion, Console.Out);
             return 0;
         }
 
@@ -218,6 +219,8 @@ internal static class Program
         }
 
         TerminalConfig config = TerminalConfig.FromRoot(root);
+        bool rebuildTriggered = false;
+        ulong totalEmitted = 0;
         try
         {
             while (true)
@@ -230,7 +233,41 @@ internal static class Program
                 RunOutcome outcome;
                 if (root.ParityDump)
                 {
-                    EffectRunner.DumpEffect(effect, world, root.MaxFrames);
+                    ulong? dumpLimit = null;
+                    if (root.MaxFrames is ulong maxFrames)
+                    {
+                        dumpLimit = maxFrames - totalEmitted;
+                    }
+
+                    if (root.RebuildAfter is ulong rebuildAt && !rebuildTriggered)
+                    {
+                        ulong cap = rebuildAt;
+                        if (dumpLimit is ulong limit && limit < cap)
+                        {
+                            cap = limit;
+                        }
+
+                        dumpLimit = cap;
+                    }
+
+                    (ulong emitted, bool complete) = EffectRunner.DumpEffect(effect, world, dumpLimit);
+                    totalEmitted += emitted;
+                    if (root.RebuildAfter is ulong rebuildAfter
+                        && !rebuildTriggered
+                        && emitted >= rebuildAfter
+                        && !complete)
+                    {
+                        // No second pass when the max-frames budget is already spent —
+                        // DumpEffect(0) still emits one frame by contract.
+                        if (root.MaxFrames is not ulong maxBudget || totalEmitted < maxBudget)
+                        {
+                            config.ReuseCanvas = false;
+                            rng = world.Rng;
+                            rebuildTriggered = true;
+                            continue;
+                        }
+                    }
+
                     outcome = RunOutcome.Complete;
                 }
                 else

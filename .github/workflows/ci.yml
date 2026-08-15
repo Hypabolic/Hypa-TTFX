@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Run bin/test (macOS gate)
+        run: ./bin/test
+
+  test-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Run bin/test (Linux oracle gate)
+        run: ./bin/test
+
+  publish-osx-arm64:
+    runs-on: macos-latest
+    needs: [test-macos]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Publish osx-arm64
+        run: ./bin/build osx-arm64
+      - name: Record size and startup
+        run: |
+          ls -la artifacts/ttfx
+          /usr/bin/time -p sh -c "printf x | ./artifacts/ttfx --seed 1 --frame-rate 0 wipe" 2>&1 | tee artifacts/osx-arm64-bench.txt || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ttfx-osx-arm64
+          path: |
+            artifacts/ttfx
+            artifacts/osx-arm64-bench.txt
+
+  publish-osx-x64:
+    runs-on: macos-15-intel
+    needs: [test-macos]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Publish osx-x64
+        run: ./bin/build osx-x64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ttfx-osx-x64
+          path: artifacts/ttfx
+
+  publish-linux-x64:
+    runs-on: ubuntu-latest
+    needs: [test-linux]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Publish linux-x64
+        run: ./bin/build linux-x64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ttfx-linux-x64
+          path: artifacts/ttfx
+
+  publish-linux-arm64:
+    runs-on: ubuntu-24.04-arm
+    needs: [test-linux]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Publish linux-arm64
+        run: ./bin/build linux-arm64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ttfx-linux-arm64
+          path: artifacts/ttfx

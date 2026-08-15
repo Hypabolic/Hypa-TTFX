@@ -1,0 +1,24 @@
+hypa-ttfx is a port of ttfx, which is a port of TerminalTextEffects (TTE).
+
+    TerminalTextEffects
+    https://github.com/ChrisBuilds/terminaltexteffects
+    MIT License, Copyright (c) 2023 ChrisBuilds
+
+    ttfx (Rust parity port)
+    https://github.com/omacom-io/ttfx
+    MIT License, Copyright (c) 2026 37signals / omacom-io
+
+Every effect in this program, the animation engine's architecture, and the
+command-line interface are ChrisBuilds' design. ttfx translated that work to
+Rust and reproduces its rendering exactly — frame for frame, byte for byte.
+This project translates ttfx to C# / .NET Native-AOT and adds nothing of its
+own to the art.
+
+The parity test suite compares against ttfx at the commit pinned in
+REFERENCE.md. That binary is built on demand via tools/parity/fetch_reference.sh;
+it is not vendored here.
+
+If you enjoy these effects, the credit belongs upstream.
+
+NOTE: The hypa-ttfx copyright holder named in LICENSE is a draft pending
+human review before first publication — confirm the legal entity/name before release.

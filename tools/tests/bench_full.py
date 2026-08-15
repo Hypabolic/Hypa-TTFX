@@ -1,13 +1,9 @@
-"""Fair ttfx vs upstream-TTE benchmark.
+"""Fair hypa-ttfx vs ttfx vs upstream-TTE benchmark.
 
-Both sides run their real user-facing command (no parity shim — the shim's
-pure-Python RNG would unfairly slow CPython, whose own random module is C).
-Frame pacing is disabled on both sides so this measures render throughput,
-not sleep().
+All three sides run their real user-facing command (no parity shim). Frame pacing
+is disabled on both sides so this measures render throughput, not sleep().
 
-matrix and thunderstorm are reported separately: they gate on wall-clock time,
-so a faster implementation renders MORE frames in the same seconds rather than
-finishing sooner — a speed ratio would be meaningless.
+matrix and thunderstorm are reported separately: they gate on wall-clock time.
 
 Usage: bench_full.py [repeats]
 """
@@ -21,13 +17,12 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-RUST = ROOT / "target/release/ttfx"
+HYPA = ROOT / "artifacts/ttfx"
+RUST = ROOT / "reference/ttfx"
 REF = ROOT / "reference/tte"
 REPEATS = int(sys.argv[1]) if len(sys.argv) > 1 else 3
 CLOCK_BOUND = {"matrix", "thunderstorm"}
 
-# Canvas geometry is overridable so the same harness covers a modest terminal and
-# a fullscreen one — the heavier effects only diverge once the canvas gets big.
 COLS = os.environ.get("TTFX_BENCH_COLS", "100")
 LINES = os.environ.get("TTFX_BENCH_LINES", "30")
 
@@ -51,7 +46,6 @@ def effects() -> list[str]:
 
 
 def best_of(cmd: list[str], data: bytes) -> float:
-    """Best wall-clock of REPEATS runs, in ms (best = least noise)."""
     times = []
     for _ in range(REPEATS):
         t = time.monotonic()
@@ -60,17 +54,24 @@ def best_of(cmd: list[str], data: bytes) -> float:
     return min(times)
 
 
-def frames_of(effect: str, data: bytes) -> int:
+def frames_of(bin_path: Path, effect: str, data: bytes) -> int:
     r = subprocess.run(
-        [str(RUST), "--seed", "1", "--frame-rate", "0", "--virtual-clock", "--parity-dump", effect],
-        input=data, capture_output=True, env=ENV,
+        [str(bin_path), "--seed", "1", "--frame-rate", "0", "--virtual-clock", "--parity-dump", effect],
+        input=data,
+        capture_output=True,
+        env=ENV,
     )
     return int(r.stderr.decode().strip().rsplit("=", 1)[-1] or 0)
 
 
 def main() -> int:
-    # Default input is a fixed small block; TTFX_BENCH_FILL=1 grows it to cover the
-    # canvas instead, which is what the character-driven effects actually scale on.
+    if not HYPA.is_file():
+        print(f"{HYPA} missing — run bin/build first", file=sys.stderr)
+        return 1
+    if not RUST.is_file():
+        print(f"{RUST} missing — run tools/parity/fetch_reference.sh first", file=sys.stderr)
+        return 1
+
     filler = "the quick brown fox jumps over the lazy dog"
     if os.environ.get("TTFX_BENCH_FILL") == "1":
         rows, width = max(1, int(LINES) - 4), max(20, int(COLS) - 10)
@@ -81,39 +82,40 @@ def main() -> int:
     text = "\n".join(lines)
     data = text.encode()
 
-    print(f"canvas: {COLS}x{LINES} · input: {len(text.splitlines())} lines x"
-          f" {max(len(l) for l in text.splitlines())} cols"
-          f" · best of {REPEATS} · frame pacing off\n")
+    print(f"canvas: {COLS}x{LINES} · input: {len(text.splitlines())} lines · best of {REPEATS}\n")
 
-    # startup: smallest possible unit of work
     tiny = b"x"
+    hypa_start = best_of([str(HYPA), "--seed", "1", "--frame-rate", "0", "wipe"], tiny)
     rs_start = best_of([str(RUST), "--seed", "1", "--frame-rate", "0", "wipe"], tiny)
     py_start = best_of([sys.executable, "-m", "terminaltexteffects", "--frame-rate", "0", "wipe"], tiny)
-    print(f"{'startup (1 char, wipe)':<22} rust {rs_start:7.1f} ms   python {py_start:8.1f} ms   {py_start/rs_start:5.1f}x\n")
+    print(
+        f"{'startup (1 char, wipe)':<22} hypa {hypa_start:7.1f} ms   rust {rs_start:7.1f} ms   "
+        f"python {py_start:8.1f} ms\n"
+    )
 
-    rows, ratios = [], []
+    rows_out = []
+    ratios = []
     for e in effects():
+        hypa = best_of([str(HYPA), "--seed", "1", "--frame-rate", "0", e], data)
         rs = best_of([str(RUST), "--seed", "1", "--frame-rate", "0", e], data)
         py = best_of([sys.executable, "-m", "terminaltexteffects", "--frame-rate", "0", e], data)
-        n = frames_of(e, data)
-        rows.append((e, rs, py, py / rs if rs else 0, n))
+        n = frames_of(HYPA, e, data)
+        rows_out.append((e, hypa, rs, py, py / rs if rs else 0, n))
         if e not in CLOCK_BOUND:
             ratios.append(py / rs if rs else 0)
 
-    rows.sort(key=lambda r: -r[3])
-    print(f"{'effect':<17}{'rust ms':>9}{'python ms':>11}{'speedup':>9}{'frames':>8}{'rust fps':>10}")
-    print("-" * 64)
-    for e, rs, py, ratio, n in rows:
+    rows_out.sort(key=lambda r: -r[4])
+    print(f"{'effect':<17}{'hypa ms':>9}{'rust ms':>9}{'python ms':>11}{'py/rust':>9}{'frames':>8}")
+    print("-" * 72)
+    for e, hypa, rs, py, ratio, n in rows_out:
         mark = " *" if e in CLOCK_BOUND else ""
-        fps = n / (rs / 1000) if rs else 0
-        print(f"{e+mark:<17}{rs:9.1f}{py:11.1f}{ratio:8.1f}x{n:8d}{fps:10.0f}")
+        print(f"{e+mark:<17}{hypa:9.1f}{rs:9.1f}{py:11.1f}{ratio:8.1f}x{n:8d}")
 
     ratios.sort()
     mid = ratios[len(ratios) // 2]
-    print("-" * 64)
-    print(f"median speedup (35 non-clock-bound effects): {mid:.1f}x"
-          f"   range {min(ratios):.1f}x–{max(ratios):.1f}x")
-    print("* clock-bound: gated on wall time, so the ratio reflects frames rendered, not time saved")
+    print("-" * 72)
+    print(f"median python/rust speedup (35 non-clock-bound): {mid:.1f}x")
+    print("* clock-bound: gated on wall time")
     return 0
 
 

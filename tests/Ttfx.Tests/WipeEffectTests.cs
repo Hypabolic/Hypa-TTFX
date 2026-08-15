@@ -176,7 +176,7 @@ internal static class WipeEffectTests
         EngineWorld world = MakeWorld();
         using var stdout = new MemoryStream();
         var err = new StringWriter();
-        ulong count = EffectRunner.DumpEffect(new ThreeFrameEffect(), world, maxFrames, stdout, err);
+        (ulong count, _) = EffectRunner.DumpEffect(new ThreeFrameEffect(), world, maxFrames, stdout, err);
         stderr = err.ToString();
         return count;
     }

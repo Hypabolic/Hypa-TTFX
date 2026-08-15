@@ -518,6 +518,9 @@ public static class CliParser
             case "--geometry-golden-dump":
                 root.GeometryGoldenDump = true;
                 break;
+            case "--rebuild-after":
+                root.RebuildAfter = (ulong)value;
+                break;
             default:
                 throw new UsageError($"unexpected argument '{spec.Long}'");
         }

@@ -35,6 +35,8 @@ public sealed class RootOptions
     public bool Probe { get; set; }
     public bool EasingGoldenDump { get; set; }
     public bool GeometryGoldenDump { get; set; }
+    /// <summary>Parity-only: rebuild after N dump frames (same path as SIGWINCH rebuild).</summary>
+    public ulong? RebuildAfter { get; set; }
 
     public static OptionSpec[] Specs { get; } =
     [
@@ -67,5 +69,6 @@ public sealed class RootOptions
         new OptionSpec("--probe", null, "", "", OptionArity.Flag, null, _ => true),
         new OptionSpec("--easing-golden-dump", null, "", "", OptionArity.Flag, null, _ => true),
         new OptionSpec("--geometry-golden-dump", null, "", "", OptionArity.Flag, null, _ => true),
+        new OptionSpec("--rebuild-after", null, "N", "Parity-only: rebuild after N dump frames", OptionArity.One, null, ValueParsers.ParseSeed),
     ];
 }

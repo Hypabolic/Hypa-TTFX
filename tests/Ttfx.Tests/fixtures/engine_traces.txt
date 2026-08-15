@@ -341,3 +341,28 @@ tick=19 char=0 coord=7,7 layer=0 path=mover scene=- vis=C active=True
 tick=20 char=0 coord=8,8 layer=0 path=mover scene=- vis=C active=True
 EVENT char=0 PATH_COMPLETE caller=path:mover
 tick=21 char=0 coord=8,8 layer=0 path=- scene=- vis=C active=False
+=== scenario_path_reactivation ===
+EVENT char=0 PATH_ACTIVATED caller=path:move
+EVENT char=0 SEGMENT_ENTERED caller=wp:0
+tick=0 char=0 coord=2,2 layer=0 path=move scene=- vis=a active=True
+tick=1 char=0 coord=3,2 layer=0 path=move scene=- vis=a active=True
+tick=2 char=0 coord=4,2 layer=0 path=move scene=- vis=a active=True
+EVENT char=0 PATH_ACTIVATED caller=path:move
+EVENT char=0 SEGMENT_ENTERED caller=wp:0
+tick=3 char=0 coord=5,2 layer=0 path=move scene=- vis=a active=True
+tick=4 char=0 coord=6,2 layer=0 path=move scene=- vis=a active=True
+tick=5 char=0 coord=7,3 layer=0 path=move scene=- vis=a active=True
+tick=6 char=0 coord=8,3 layer=0 path=move scene=- vis=a active=True
+tick=7 char=0 coord=8,3 layer=0 path=move scene=- vis=a active=True
+tick=8 char=0 coord=9,3 layer=0 path=move scene=- vis=a active=True
+tick=9 char=0 coord=10,4 layer=0 path=move scene=- vis=a active=True
+tick=10 char=0 coord=11,4 layer=0 path=move scene=- vis=a active=True
+=== scenario_scene_overwrite ===
+EVENT char=0 SCENE_ACTIVATED caller=scene:dup
+tick=0 char=0 coord=1,2 layer=0 path=- scene=dup vis=B active=True
+EVENT char=0 SCENE_COMPLETE caller=scene:dup
+tick=1 char=0 coord=1,2 layer=0 path=- scene=- vis=B active=False
+tick=2 char=0 coord=1,2 layer=0 path=- scene=- vis=B active=False
+tick=3 char=0 coord=1,2 layer=0 path=- scene=- vis=B active=False
+tick=4 char=0 coord=1,2 layer=0 path=- scene=- vis=B active=False
+tick=5 char=0 coord=1,2 layer=0 path=- scene=- vis=B active=False
