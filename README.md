@@ -25,7 +25,7 @@ belong upstream.
 | Topic | Behavior here | Why |
 |---|---|---|
 | Random number generator | xoshiro256++ (same as ttfx) | Inherited from ttfx; `--seed` matches ttfx and this port, not Python TTE's Mersenne Twister |
-| Broken-pipe exit status | 0 | plan §8.2 — upstream Python swallows `EPIPE`; we match that contract |
+| Broken-pipe exit status | 0 | Upstream Python swallows `EPIPE`; we match that contract |
 | SIGTERM exit status | Matches ttfx (signal 15 via `WIFSIGNALED`) | Verified in issue 0012; not a divergence |
 | Shell completions | Hand-written templates | Zero NuGet packages — no `clap_complete`; text differs from ttfx's generated scripts |
 | Plugin effects | Not supported | No Python interpreter to load them |
@@ -80,6 +80,3 @@ match ttfx / TTE.
 ## Reference pins
 
 See [REFERENCE.md](REFERENCE.md) for the pinned ttfx and upstream TTE commits.
-
-**Human review:** A maintainer must review [LICENSE](LICENSE) and [NOTICE](NOTICE)
-before first public release.

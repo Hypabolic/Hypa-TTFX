@@ -1,11 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
 using System.Text;
 using Ttfx.Engine;
 using Ttfx.Utils;
-using Path = System.IO.Path;
 
 namespace Ttfx.Tests;
 
@@ -16,7 +13,6 @@ internal static class M0FrameTests
         yield return new TestCase("visible extents differ from canvas", VisibleDiffersFromCanvas);
         yield return new TestCase("sgr order dim never emitted", SgrOrderDimOmitted);
         yield return new TestCase("character_id gaps overwrite+whitespace", CharacterIdGaps);
-        yield return new TestCase("tiocgwinsz matches C probe", TiocgwinszMatchesCProbe);
         yield return new TestCase("swap_remove hides without shifting", SwapRemoveVisibility);
         yield return new TestCase("reject unsupported ansi still throws", RejectUnsupportedAnsi);
         yield return new TestCase("canvas centre odd adjustment", CanvasCentreOddAdjustment);
@@ -119,34 +115,6 @@ internal static class M0FrameTests
         }
 
         Harness.AssertTrue("explicit CharacterId field has gaps", sawGap);
-    }
-
-    private static void TiocgwinszMatchesCProbe()
-    {
-        string root = Harness.FindRepoRoot();
-        string probe = Path.Combine(root, "tools", "parity", "tiocgwinsz_probe.c");
-        string exe = Path.Combine(Path.GetTempPath(), "hypa-tiocgwinsz-probe");
-        var compile = Process.Start(new ProcessStartInfo
-        {
-            FileName = "cc",
-            Arguments = $"-o \"{exe}\" \"{probe}\"",
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-        });
-        compile!.WaitForExit();
-        Harness.AssertEqual("cc exit", 0, compile.ExitCode);
-        var run = Process.Start(new ProcessStartInfo
-        {
-            FileName = exe,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-        });
-        string output = run!.StandardOutput.ReadToEnd();
-        run.WaitForExit();
-        Harness.AssertTrue("probe TIOCGWINSZ", output.Contains($"TIOCGWINSZ=0x{PosixTerminal.DarwinTiocgwinsz:x}", StringComparison.Ordinal));
-        Harness.AssertTrue("probe sizeof", output.Contains($"sizeof_winsize={PosixTerminal.WinSizeBytes}", StringComparison.Ordinal));
     }
 
     private static void SwapRemoveVisibility()

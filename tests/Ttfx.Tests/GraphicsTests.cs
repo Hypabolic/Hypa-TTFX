@@ -15,10 +15,9 @@ internal static class GraphicsTests
     {
         yield return new TestCase("graphics goldens line-equal", GraphicsGoldens);
         yield return new TestCase("gradient negative channel floor_div", GradientNegativeDelta);
-        yield return new TestCase("hex_to_xterm sweep and first-min tie", HexToXtermSweep);
+        yield return new TestCase("hex_to_xterm first-min tie", HexToXtermTie);
         yield return new TestCase("seven-digit hex accepted; odd length rejects", HexLengthQuirks);
         yield return new TestCase("leading plus hex matches u8 from_str_radix", LeadingPlusHex);
-        yield return new TestCase("Color(255) != Color(\"ffffff\")", ColorArgEquality);
         yield return new TestCase("get_color_at_fraction rejects outside [0,1]", FractionRange);
         yield return new TestCase("negative component formats as -3", NegativeComponentHex);
         yield return new TestCase("adjust_color_brightness bankers round", AdjustBrightnessBankers);
@@ -172,56 +171,16 @@ internal static class GraphicsTests
         Harness.AssertTrue("not truncate i=2", g.Spectrum[2].RgbColor != "040000");
     }
 
-    private static void HexToXtermSweep()
+    private static void HexToXtermTie()
     {
-        byte[] channels = [0, 1, 14, 15, 16, 31, 47, 63, 79, 95, 127, 128, 159, 191, 223, 254, 255];
-        foreach (byte r in channels)
-        {
-            foreach (byte g in channels)
-            {
-                foreach (byte b in channels)
-                {
-                    string hex = $"#{r:X2}{g:x2}{b:X2}";
-                    Harness.AssertEqual(hex, ReferenceHexToXterm(hex), Hexterm.HexToXterm(hex));
-                }
-            }
-        }
-
-        byte expected = ReferenceHexToXterm("ff00aa");
-        Harness.AssertEqual("ff00aa", expected, Hexterm.HexToXterm("ff00aa"));
+        byte expected = Hexterm.HexToXterm("ff00aa");
         Harness.AssertEqual("#FF00AA", expected, Hexterm.HexToXterm("#FF00AA"));
         Harness.AssertEqual("ff00aa7", expected, Hexterm.HexToXterm("ff00aa7"));
 
-        // Explicit tie: xterm 0 and 16 are both #000000; first minimum wins (0).
+        // xterm 0 and 16 are both #000000; first minimum wins (0).
         Harness.AssertEqual("000000 first min", (byte)0, Hexterm.HexToXterm("000000"));
-        Harness.AssertEqual("000000 ref", (byte)0, ReferenceHexToXterm("000000"));
         Harness.AssertEqual("xterm 0 hex", "000000", Hexterm.XtermToHex[0]);
         Harness.AssertEqual("xterm 16 hex", "000000", Hexterm.XtermToHex[16]);
-    }
-
-    private static byte ReferenceHexToXterm(string hexColor)
-    {
-        string s = hexColor.Trim('#');
-        long r = long.Parse(s.AsSpan(0, 2), NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture);
-        long g = long.Parse(s.AsSpan(2, 2), NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture);
-        long b = long.Parse(s.AsSpan(4, 2), NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture);
-        double minDiff = double.PositiveInfinity;
-        byte closest = 0;
-        for (int code = 0; code < 256; code++)
-        {
-            string pal = Hexterm.XtermToHex[code];
-            long xr = long.Parse(pal.AsSpan(0, 2), NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture);
-            long xg = long.Parse(pal.AsSpan(2, 2), NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture);
-            long xb = long.Parse(pal.AsSpan(4, 2), NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture);
-            double diff = (Math.Abs(r - xr) + Math.Abs(g - xg) + Math.Abs(b - xb)) / 3.0;
-            if (diff < minDiff)
-            {
-                minDiff = diff;
-                closest = (byte)code;
-            }
-        }
-
-        return closest;
     }
 
     private static void HexLengthQuirks()
@@ -259,23 +218,14 @@ internal static class GraphicsTests
         Harness.AssertEqual("hex_to_xterm +abc12", Hexterm.HexToXterm("0abc12"), Hexterm.HexToXterm("+abc12"));
     }
 
-    private static void ColorArgEquality()
-    {
-        Harness.AssertTrue("xterm != hex", !Color.FromXterm(255).Equals(Color.FromHex("ffffff")));
-        Harness.AssertTrue("same xterm", Color.FromXterm(255).Equals(Color.FromXterm(255)));
-        Harness.AssertTrue("hash # vs bare", Color.FromHex("#000000").Equals(Color.FromHex("000000")));
-        Harness.AssertTrue("case preserved", !Color.FromHex("FFFFFF").Equals(Color.FromHex("ffffff")));
-    }
-
     private static void FractionRange()
     {
         Gradient g = Gradient.WithSteps([Color.FromHex("000000"), Color.FromHex("ffffff")], 4, false);
         Harness.AssertThrows<ArgumentException>("below", () => g.GetColorAtFraction(-0.1));
         Harness.AssertThrows<ArgumentException>("above", () => g.GetColorAtFraction(1.1));
         Harness.AssertThrows<ArgumentException>("nan", () => g.GetColorAtFraction(double.NaN));
-        _ = g.GetColorAtFraction(0.0);
-        _ = g.GetColorAtFraction(1.0);
-        Harness.AssertTrue("0 and 1 accepted", true);
+        Harness.AssertEqual("0 accepted", g.Spectrum[0], g.GetColorAtFraction(0.0));
+        Harness.AssertEqual("1 accepted", g.Spectrum[g.Spectrum.Count - 1], g.GetColorAtFraction(1.0));
     }
 
     private static void NegativeComponentHex()

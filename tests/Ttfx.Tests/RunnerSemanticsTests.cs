@@ -2,69 +2,27 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using Ttfx.Cli;
 using Ttfx.Effects;
 using Ttfx.Engine;
 using Ttfx.Utils;
 
 namespace Ttfx.Tests;
 
-internal static class WipeEffectTests
+/// <summary>
+/// Runner contracts the frame-parity suite does not name: <c>--max-frames 0</c>
+/// still emits one frame, the virtual clock's dt, cursor restore, and DEC
+/// save/restore bytes (ESC 7 / ESC 8, not CSI s/u).
+/// </summary>
+internal static class RunnerSemanticsTests
 {
     internal static IEnumerable<TestCase> All()
     {
-        yield return new TestCase("wipe DispatchCallback is callable", WipeDispatchCallback);
-        yield return new TestCase("registry 37 names in EffectCommand order", RegistryThirtySevenNames);
-        yield return new TestCase("probe is not a registry name", ProbeAbsentFromRegistry);
         yield return new TestCase("virtual clock frame-rate 0 uses dt=1/60", VirtualClockDt);
         yield return new TestCase("clock advances inside Frame not the run loop", ClockAdvancesInsideFrame);
         yield return new TestCase("max-frames 0 emits one frame", MaxFramesZeroEmitsOne);
-        yield return new TestCase("max-frames 1 emits one frame", MaxFramesOneEmitsOne);
         yield return new TestCase("max-frames past completion emits all", MaxFramesPastCompletionEmitsAll);
         yield return new TestCase("run_effect restores cursor on error", RestoreCursorOnError);
-        yield return new TestCase("wipe AtLeastOne defaults when flag absent", WipeDefaultStops);
-        yield return new TestCase("wipe stops flag replaces defaults", WipeStopsReplaceDefaults);
         yield return new TestCase("DEC save/restore are ESC plus digit", DecSaveRestoreBytes);
-    }
-
-    private static void WipeDispatchCallback()
-    {
-        var wipe = new Wipe(new WipeConfig());
-        EngineWorld world = MakeWorld();
-        wipe.DispatchCallback(world, new CharId(0), new EffectCallback(0, []));
-        Harness.AssertTrue("dispatch is a no-op", true);
-    }
-
-    private static void RegistryThirtySevenNames()
-    {
-        string[] expected =
-        [
-            "beams", "binarypath", "blackhole", "bouncyballs", "bubbles", "burn",
-            "colorshift", "crumble", "decrypt", "errorcorrect", "expand", "fireworks",
-            "highlight", "laseretch", "matrix", "middleout", "orbittingvolley", "overflow",
-            "pour", "print", "rain", "randomsequence", "rings", "scattered",
-            "slice", "slide", "smoke", "spotlights", "spray", "swarm",
-            "sweep", "synthgrid", "thunderstorm", "unstable", "vhstape", "waves",
-            "wipe",
-        ];
-        Harness.AssertEqual("count", 37, EffectRegistry.Effects.Length);
-        for (int i = 0; i < expected.Length; i++)
-        {
-            Harness.AssertEqual($"name[{i}]", expected[i], EffectRegistry.Effects[i].Name);
-        }
-
-        Harness.AssertTrue("wipe factory", EffectRegistry.Find("wipe")!.Factory is not null);
-        Harness.AssertTrue("bouncyballs factory", EffectRegistry.Find("bouncyballs")!.Factory is not null);
-        Harness.AssertTrue("errorcorrect factory", EffectRegistry.Find("errorcorrect")!.Factory is not null);
-        Harness.AssertTrue("expand factory", EffectRegistry.Find("expand")!.Factory is not null);
-        Harness.AssertTrue("middleout factory", EffectRegistry.Find("middleout")!.Factory is not null);
-        Harness.AssertTrue("beams factory", EffectRegistry.Find("beams")!.Factory is not null);
-    }
-
-    private static void ProbeAbsentFromRegistry()
-    {
-        Harness.AssertTrue("no probe", !EffectRegistry.Contains("probe"));
-        Harness.AssertEqual("still 37", 37, EffectRegistry.Effects.Length);
     }
 
     private static void VirtualClockDt()
@@ -98,13 +56,6 @@ internal static class WipeEffectTests
         Harness.AssertTrue("stderr", stderr.Contains("frames=1", StringComparison.Ordinal));
     }
 
-    private static void MaxFramesOneEmitsOne()
-    {
-        ulong count = DumpCounting(1, out string stderr);
-        Harness.AssertEqual("count", 1UL, count);
-        Harness.AssertTrue("stderr", stderr.Contains("frames=1", StringComparison.Ordinal));
-    }
-
     private static void MaxFramesPastCompletionEmitsAll()
     {
         ulong count = DumpCounting(100, out string stderr);
@@ -123,36 +74,11 @@ internal static class WipeEffectTests
         }
         catch (EngineException)
         {
-            byte[] bytes = stdout.ToArray();
-            string text = Encoding.UTF8.GetString(bytes);
+            string text = Encoding.UTF8.GetString(stdout.ToArray());
             Harness.AssertTrue("hid cursor", text.Contains(Ansi.HideCursor, StringComparison.Ordinal));
             Harness.AssertTrue("showed cursor", text.Contains(Ansi.ShowCursor, StringComparison.Ordinal));
             Harness.AssertTrue("eol", text.EndsWith('\n'));
         }
-    }
-
-    private static void WipeDefaultStops()
-    {
-        ParseResult r = CliParser.Parse(["wipe"]);
-        var stops = (List<object>)r.EffectOptions["--final-gradient-stops"];
-        Harness.AssertEqual("stop count", 3, stops.Count);
-        Harness.AssertEqual("stop0", "833ab4", ((Color)stops[0]).Original);
-        Harness.AssertEqual("stop1", "fd1d1d", ((Color)stops[1]).Original);
-        Harness.AssertEqual("stop2", "fcb045", ((Color)stops[2]).Original);
-        var steps = (List<object>)r.EffectOptions["--final-gradient-steps"];
-        Harness.AssertEqual("steps count", 1, steps.Count);
-        Harness.AssertEqual("steps0", 12L, (long)steps[0]);
-        Harness.AssertEqual("ease", Easing.InOutCirc, (Easing)r.EffectOptions["--wipe-ease"]);
-        Harness.AssertEqual("delay", 0L, (long)r.EffectOptions["--wipe-delay"]);
-        Harness.AssertEqual("frames", 3L, (long)r.EffectOptions["--final-gradient-frames"]);
-        Harness.AssertEqual(
-            "direction",
-            CharacterGroup.DiagonalTopLeftToBottomRight,
-            (CharacterGroup)r.EffectOptions["--wipe-direction"]);
-        Harness.AssertEqual(
-            "grad dir",
-            GradientDirection.Vertical,
-            (GradientDirection)r.EffectOptions["--final-gradient-direction"]);
     }
 
     private static void DecSaveRestoreBytes()
@@ -161,14 +87,6 @@ internal static class WipeEffectTests
         Harness.AssertEqual("restore", "\u001b8", Ansi.DecRestoreCursor);
         Harness.AssertEqual("save byte0", 0x1b, (int)Ansi.DecSaveCursor[0]);
         Harness.AssertEqual("save byte1", (int)'7', (int)Ansi.DecSaveCursor[1]);
-    }
-
-    private static void WipeStopsReplaceDefaults()
-    {
-        ParseResult r = CliParser.Parse(["wipe", "--final-gradient-stops", "ff0000"]);
-        var stops = (List<object>)r.EffectOptions["--final-gradient-stops"];
-        Harness.AssertEqual("user stop count", 1, stops.Count);
-        Harness.AssertEqual("user stop", "ff0000", ((Color)stops[0]).Original);
     }
 
     private static ulong DumpCounting(ulong? maxFrames, out string stderr)

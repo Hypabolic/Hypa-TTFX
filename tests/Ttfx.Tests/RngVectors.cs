@@ -17,7 +17,6 @@ internal static class RngVectors
     {
         yield return new TestCase("rngdump seed 42 first 10k", () => MatchDump(42));
         yield return new TestCase("rngdump seed 7 first 10k", () => MatchDump(7));
-        yield return new TestCase("rngdump /tmp seed 42 if present", MatchTmpDump);
         yield return new TestCase("randint(0,2) rejection loop covered", RejectionLoop);
         yield return new TestCase("shuffle matches CPython/rngdump order", ShuffleOrder);
         yield return new TestCase("Rng instance continues after rebuild reassign", RebuildContinues);
@@ -128,25 +127,6 @@ internal static class RngVectors
         }
 
         CompareDumps($"seed {seed}", File.ReadAllText(fixture), actual);
-    }
-
-    private static void MatchTmpDump()
-    {
-        const string path = "/tmp/rngdump.txt";
-        if (!File.Exists(path))
-        {
-            Harness.AssertTrue(" /tmp/rngdump.txt optional skip", true);
-            return;
-        }
-
-        string rust = File.ReadAllText(path);
-        if (!rust.StartsWith("SEED 42", StringComparison.Ordinal))
-        {
-            Harness.AssertTrue("/tmp/rngdump.txt is seed 42", false);
-            return;
-        }
-
-        CompareDumps("/tmp/rngdump.txt", rust, Dump(42));
     }
 
     private static void CompareDumps(string label, string expectedRaw, string actualRaw)

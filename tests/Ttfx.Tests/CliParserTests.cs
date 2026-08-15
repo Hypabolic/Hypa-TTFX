@@ -31,6 +31,7 @@ internal static class CliParserTests
         yield return new TestCase("print-completion shells", PrintCompletionShells);
         yield return new TestCase("seed ulong", SeedUlong);
         yield return new TestCase("all fifteen terminal options", FifteenTerminalOptions);
+        yield return new TestCase("rebuild-after parser", RebuildAfterParser);
     }
 
     private static void Defaults()
@@ -228,5 +229,11 @@ internal static class CliParserTests
         Harness.AssertTrue("reuse", r.Root.ReuseCanvas);
         Harness.AssertTrue("noeol", r.Root.NoEol);
         Harness.AssertTrue("norestore", r.Root.NoRestoreCursor);
+    }
+
+    private static void RebuildAfterParser()
+    {
+        ParseResult r = CliParser.Parse(["--rebuild-after", "5", "wipe"]);
+        Harness.AssertEqual("rebuild-after", 5UL, r.Root.RebuildAfter);
     }
 }

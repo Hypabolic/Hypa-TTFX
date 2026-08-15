@@ -1,5 +1,9 @@
 MIT License
 
+This software is a C# / .NET Native-AOT port of ttfx, which is itself a port
+of the original Python project TerminalTextEffects
+(https://github.com/ChrisBuilds/terminaltexteffects).
+
 Copyright (c) 2026 hypabolic (Matthew Gribben)
 Copyright (c) 2026 37signals / omacom-io (ttfx, from which this is ported)
 Copyright (c) 2023 ChrisBuilds (TerminalTextEffects, from which ttfx is ported)

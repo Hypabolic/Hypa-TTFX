@@ -2,13 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using Ttfx.Engine;
-using Ttfx.Utils;
 
 namespace Ttfx.Tests;
 
 /// <summary>
-/// Four resize_settled suppression checks, individually, plus RNG continuity
-/// across a rebuild. Transcribed contract from <c>terminal.rs</c> 622-640.
+/// Four resize_settled suppression checks, individually.
+/// Transcribed contract from <c>terminal.rs</c> 622-640.
 /// </summary>
 internal static class SignalsResizeTests
 {
@@ -18,7 +17,6 @@ internal static class SignalsResizeTests
         yield return new TestCase("resize_settled: unchanged dimensions", UnchangedDimensions);
         yield return new TestCase("resize_settled: unchanged layout", UnchangedLayout);
         yield return new TestCase("resize_settled: actual rebuild", ActualRebuild);
-        yield return new TestCase("rng continues across rebuild", RngContinuesAcrossRebuild);
         yield return new TestCase("SIGINT double-register throws", SigintDoubleRegister);
     }
 
@@ -93,33 +91,6 @@ internal static class SignalsResizeTests
             StartQuietWindow(terminal);
             Harness.AssertTrue("rebuild", terminal.ResizeSettled());
         });
-    }
-
-    private static void RngContinuesAcrossRebuild()
-    {
-        var config = new TerminalConfig
-        {
-            CanvasWidth = 20,
-            CanvasHeight = 8,
-            IgnoreTerminalDimensions = true,
-            FrameRate = 0,
-        };
-        Rng rng = Rng.Seeded(1);
-        EngineWorld first = EngineWorld.New("hi", config, rng, Clock.VirtualWithFrameRate(0));
-        double drawn = first.Rng.Random();
-        Harness.AssertTrue("same instance after New", ReferenceEquals(rng, first.Rng));
-
-        // Rebuild path: carry the same Rng forward, do not reseed.
-        EngineWorld rebuilt = EngineWorld.New("hi", config, first.Rng, Clock.VirtualWithFrameRate(0));
-        Harness.AssertTrue("rebuild reuses Rng instance", ReferenceEquals(first.Rng, rebuilt.Rng));
-        double continued = rebuilt.Rng.Random();
-
-        Rng expected = Rng.Seeded(1);
-        double expectedFirst = expected.Random();
-        double expectedSecond = expected.Random();
-        Harness.AssertEqual("first draw", expectedFirst, drawn);
-        Harness.AssertEqual("second draw after rebuild", expectedSecond, continued);
-        Harness.AssertTrue("state advanced", continued != drawn);
     }
 
     /// <summary>

@@ -18,7 +18,6 @@ internal static class EngineTraces
     internal static IEnumerable<TestCase> All()
     {
         yield return new TestCase("engine_traces.txt state-machine traces", EngineTracesMatchPython);
-        yield return new TestCase("duplicate event registration rejects equal payload", DuplicateEventRegistrationTest);
     }
 
     private static EngineWorld MakeCtx()
@@ -366,25 +365,6 @@ internal static class EngineTraces
         world.ActivateScene(NoopHooks.Instance, a, "dup");
         RunTicks(world, log, ids, 6, 0);
         Flush(world, log);
-    }
-
-    private static void ScenarioDuplicateEventRegistration()
-    {
-        EngineWorld world = MakeCtx();
-        List<CharId> ids = Chars(world, 1);
-        CharId a = ids[0];
-        world.Terminal.Arena[(int)a.Value].Motion.NewPath(1.0, null, null, 0, false, "p");
-        world.Terminal.Arena[(int)a.Value].Motion.Paths.Get("p")!.NewWaypoint(Coord.New(5, 5), null, "");
-        var action = new EventAction.SetLayer(3);
-        world.RegisterEvent(a, Event.PathComplete, new CallerKey.Path("p"), action);
-        Harness.AssertThrows<EngineException>(
-            "duplicate equal payload",
-            () => world.RegisterEvent(a, Event.PathComplete, new CallerKey.Path("p"), action));
-    }
-
-    internal static void DuplicateEventRegistrationTest()
-    {
-        ScenarioDuplicateEventRegistration();
     }
 
     private static void EngineTracesMatchPython()

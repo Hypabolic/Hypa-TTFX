@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# CLI contract corpus: exit codes and stream routing per plan.md §8
+# CLI contract corpus: exit codes and stream routing
 # (0 success; 1 runtime errors — no-input/file errors on STDOUT,
 # unsupported-ANSI on STDERR; 2 usage errors).
 set -u

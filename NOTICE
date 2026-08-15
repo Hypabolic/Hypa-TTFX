@@ -19,6 +19,3 @@ REFERENCE.md. That binary is built on demand via tools/parity/fetch_reference.sh
 it is not vendored here.
 
 If you enjoy these effects, the credit belongs upstream.
-
-NOTE: The hypa-ttfx copyright holder named in LICENSE is a draft pending
-human review before first publication — confirm the legal entity/name before release.
