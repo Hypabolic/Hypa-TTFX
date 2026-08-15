@@ -191,6 +191,30 @@ public static class ValueParsers
     /// <summary>common.rs parse_positive_float: float &gt; 0, boxed for OptionSpec.</summary>
     public static object ParsePositiveFloat(string s) => PositiveFloat(s);
 
+    /// <summary>common.rs parse_positive_int_range: "1-10".</summary>
+    public static object ParsePositiveIntRange(string s)
+    {
+        int dash = s.IndexOf('-', StringComparison.Ordinal);
+        if (dash < 0)
+        {
+            throw new UsageError($"invalid range: '{s}'");
+        }
+
+        string aStr = s.Substring(0, dash);
+        string bStr = s.Substring(dash + 1);
+        if (!TryParseI64(aStr, out long a) || !TryParseI64(bStr, out long b))
+        {
+            throw new UsageError($"invalid range: '{s}'");
+        }
+
+        if (a > 0 && a <= b)
+        {
+            return (a, b);
+        }
+
+        throw new UsageError($"invalid range: '{s}'");
+    }
+
     /// <summary>common.rs parse_positive_float_range: "0.25-0.5".</summary>
     public static object ParsePositiveFloatRange(string s)
     {
@@ -215,6 +239,9 @@ public static class ValueParsers
         throw new UsageError($"invalid range: '{s}'");
     }
 
+    /// <summary>common.rs parse_non_negative_ratio: 0 &lt;= n &lt;= 1, boxed for OptionSpec.</summary>
+    public static object ParseNonNegativeRatio(string s) => NonNegativeRatio(s);
+
     /// <summary>common.rs parse_positive_ratio: 0 &lt; n &lt;= 1, boxed for OptionSpec.</summary>
     public static object ParsePositiveRatio(string s) => PositiveRatio(s);
 
@@ -228,6 +255,9 @@ public static class ValueParsers
 
         throw new UsageError($"{FormatF64(v)} is not a valid value. Argument must be a float >= 0.");
     }
+
+    /// <summary>common.rs parse_non_negative_float: float &gt;= 0, boxed for OptionSpec.</summary>
+    public static object ParseNonNegativeFloat(string s) => NonNegativeFloat(s);
 
     public static double NonNegativeRatio(string s)
     {
@@ -382,6 +412,21 @@ public static class ValueParsers
             "diagonal" => GradientDirection.Diagonal,
             "radial" => GradientDirection.Radial,
             _ => throw new UsageError($"invalid gradient direction: '{s}'"),
+        };
+    }
+
+    /// <summary>waves.rs parse_wave_direction — subset of CharacterGroup.</summary>
+    public static object ParseWaveDirection(string s)
+    {
+        return s switch
+        {
+            "column_left_to_right" => CharacterGroup.ColumnLeftToRight,
+            "column_right_to_left" => CharacterGroup.ColumnRightToLeft,
+            "row_top_to_bottom" => CharacterGroup.RowTopToBottom,
+            "row_bottom_to_top" => CharacterGroup.RowBottomToTop,
+            "center_to_outside" => CharacterGroup.CenterToOutside,
+            "outside_to_center" => CharacterGroup.OutsideToCenter,
+            _ => throw new UsageError($"invalid wave direction: '{s}'"),
         };
     }
 

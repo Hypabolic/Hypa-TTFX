@@ -2,17 +2,20 @@ beams-basic|basic.txt|beams
 beams-custom|paragraph.txt|beams --beam-row-symbols - = --beam-column-symbols . : --beam-delay 2 --beam-row-speed-range 30-80 --beam-column-speed-range 12-20 --beam-gradient-stops ff0000 0000ff --beam-gradient-steps 4 --beam-gradient-frames 1 --final-gradient-direction horizontal --final-wipe-speed 5
 beams-dynamic|colored.txt|--existing-color-handling dynamic beams
 beams-xterm-anchored|paragraph.txt|--xterm-colors --canvas-width 60 --canvas-height 20 --anchor-canvas c --anchor-text c beams
+beams-unicode|unicode.txt|beams
 binarypath-basic|basic.txt|binarypath
 binarypath-custom|paragraph.txt|binarypath --binary-colors ff0000 00ff00 0000ff --movement-speed 2 --active-binary-groups 0.3 --final-gradient-direction vertical
 binarypath-dynamic|colored.txt|--existing-color-handling dynamic binarypath
 binarypath-single|single.txt|binarypath
 binarypath-xterm-anchored|paragraph.txt|--xterm-colors --canvas-width 60 --canvas-height 20 --anchor-canvas c --anchor-text c binarypath --active-binary-groups 0.15
+binarypath-unicode|unicode.txt|binarypath
 blackhole-always-xterm|colored.txt|--existing-color-handling always --xterm-colors blackhole
 blackhole-anchored|paragraph.txt|--canvas-width 60 --canvas-height 20 --anchor-canvas c --anchor-text c blackhole
 blackhole-basic|basic.txt|blackhole
 blackhole-custom|paragraph.txt|blackhole --blackhole-color 00ffff --star-colors ff0000 00ff00 0000ff --final-gradient-stops ff0000 ffffff --final-gradient-steps 6 --final-gradient-direction horizontal
 blackhole-dynamic|colored.txt|--existing-color-handling dynamic blackhole
 blackhole-single|single.txt|blackhole
+blackhole-unicode|unicode.txt|blackhole
 bouncyballs-basic|basic.txt|bouncyballs
 bouncyballs-custom|paragraph.txt|bouncyballs --ball-colors ff0000 00ff00 0000ff --ball-symbols o . x --ball-delay 0 --movement-speed 1.2 --movement-easing out_quad --final-gradient-direction horizontal
 bouncyballs-dynamic|colored.txt|--existing-color-handling dynamic bouncyballs
@@ -24,6 +27,7 @@ bubbles-bottom|paragraph.txt|bubbles --pop-condition bottom --bubble-colors ff00
 bubbles-dynamic|colored.txt|--existing-color-handling dynamic bubbles --bubble-delay 5
 bubbles-rainbow-anywhere|paragraph.txt|bubbles --rainbow --pop-condition anywhere --bubble-speed 0.8 --bubble-delay 8
 bubbles-xterm-anchored|paragraph.txt|--xterm-colors --canvas-width 60 --canvas-height 20 --anchor-canvas c --anchor-text c bubbles
+bubbles-unicode|unicode.txt|bubbles
 burn-basic|basic.txt|burn
 burn-custom|paragraph.txt|burn --starting-color 404040 --burn-colors ff0000 ffa500 ffff00 --smoke-chance 1.0 --final-gradient-stops 00ff00 0000ff --final-gradient-steps 8 --final-gradient-direction horizontal
 burn-dynamic|colored.txt|--existing-color-handling dynamic burn
@@ -35,18 +39,21 @@ colorshift-dynamic|colored.txt|--existing-color-handling dynamic colorshift --cy
 colorshift-notravel|paragraph.txt|colorshift --no-travel --cycles 2 --skip-final-gradient
 colorshift-vertical|basic.txt|colorshift --travel-direction vertical --cycles 1
 colorshift-xterm-anchored|paragraph.txt|--xterm-colors --canvas-width 60 --canvas-height 20 --anchor-canvas c --anchor-text c colorshift --cycles 1
+colorshift-unicode|unicode.txt|colorshift --cycles 1
 crumble-always-xterm|colored.txt|--existing-color-handling always --xterm-colors crumble
 crumble-anchored|paragraph.txt|--canvas-width 60 --canvas-height 20 --anchor-canvas c --anchor-text c crumble
 crumble-basic|basic.txt|crumble
 crumble-custom|paragraph.txt|crumble --final-gradient-stops ff0000 00ff00 0000ff --final-gradient-steps 6 --final-gradient-direction horizontal
 crumble-dynamic|colored.txt|--existing-color-handling dynamic crumble
 crumble-single|single.txt|crumble
+crumble-unicode|unicode.txt|crumble
 decrypt-always-xterm|colored.txt|--existing-color-handling always --xterm-colors decrypt
 decrypt-basic|basic.txt|decrypt
 decrypt-custom|paragraph.txt|decrypt --typing-speed 3 --ciphertext-colors ff0000 00ff00 0000ff --final-gradient-stops eda000 00d1ff --final-gradient-direction horizontal
 decrypt-dynamic|colored.txt|--existing-color-handling dynamic decrypt
 decrypt-single|single.txt|decrypt --typing-speed 1
 decrypt-xterm-anchored|paragraph.txt|--xterm-colors --canvas-width 60 --canvas-height 20 --anchor-canvas c --anchor-text c decrypt
+decrypt-unicode|unicode.txt|decrypt
 errorcorrect-basic|basic.txt|errorcorrect
 errorcorrect-dynamic|colored.txt|--existing-color-handling dynamic errorcorrect --error-pairs 0.5
 errorcorrect-heavy|paragraph.txt|errorcorrect --error-pairs 0.4 --swap-delay 2 --error-color ff8800 --correct-color 00ff88 --movement-speed 0.4
@@ -58,10 +65,12 @@ expand-custom|paragraph.txt|expand --expand-easing out_bounce --movement-speed 0
 expand-dynamic|colored.txt|--existing-color-handling dynamic expand
 expand-unicode|unicode.txt|expand
 expand-xterm-anchored|paragraph.txt|--xterm-colors --canvas-width 60 --canvas-height 20 --anchor-canvas c --anchor-text c expand
+fireworks-unicode|unicode.txt|fireworks
 fireworks-basic|basic.txt|fireworks
 fireworks-custom|paragraph.txt|fireworks --explode-anywhere --firework-colors ff0000 00ff00 0000ff --firework-symbol * --firework-volume 0.12 --launch-delay 10 --explode-distance 0.4 --final-gradient-direction diagonal
 fireworks-dynamic|colored.txt|--existing-color-handling dynamic fireworks
 fireworks-xterm-anchored|paragraph.txt|--xterm-colors --canvas-width 60 --canvas-height 20 --anchor-canvas c --anchor-text c fireworks --launch-delay 5
+highlight-unicode|unicode.txt|highlight
 highlight-basic|basic.txt|highlight
 highlight-center|paragraph.txt|highlight --highlight-direction center_to_outside --highlight-brightness 2.5
 highlight-custom|paragraph.txt|highlight --highlight-brightness 0.5 --highlight-direction row_top_to_bottom --highlight-width 3 --final-gradient-stops ff0000 0000ff --final-gradient-steps 6 --final-gradient-direction horizontal
@@ -86,10 +95,12 @@ middleout-dynamic|colored.txt|--existing-color-handling dynamic middleout
 middleout-horizontal|paragraph.txt|middleout --expand-direction horizontal --starting-color 00ff00 --center-movement-speed 0.3 --full-movement-speed 0.9 --center-easing out_bounce --full-easing in_quad
 middleout-unicode|unicode.txt|middleout
 # name|input|args   (each case runs with seeds 42 and 1337, max 400 frames)
+orbittingvolley-unicode|unicode.txt|orbittingvolley
 orbittingvolley-basic|basic.txt|orbittingvolley
 orbittingvolley-custom|paragraph.txt|orbittingvolley --top-launcher-symbol T --right-launcher-symbol R --bottom-launcher-symbol B --left-launcher-symbol L --launcher-movement-speed 1.4 --character-movement-speed 0.8 --volley-size 0.1 --launch-delay 10 --character-easing in_out_quad --final-gradient-direction vertical
 orbittingvolley-dynamic|colored.txt|--existing-color-handling dynamic orbittingvolley --launch-delay 5
 orbittingvolley-xterm-anchored|paragraph.txt|--xterm-colors --canvas-width 60 --canvas-height 20 --anchor-canvas c --anchor-text c orbittingvolley --volley-size 0.2
+overflow-unicode|unicode.txt|overflow
 overflow-always-xterm|colored.txt|--existing-color-handling always --xterm-colors overflow
 overflow-anchored|paragraph.txt|--canvas-width 60 --canvas-height 20 --anchor-canvas c --anchor-text c overflow
 overflow-basic|basic.txt|overflow
@@ -103,6 +114,7 @@ pour-dynamic|colored.txt|--existing-color-handling dynamic pour
 pour-left|paragraph.txt|pour --pour-direction left --starting-color ff0000 --final-gradient-frames 3
 pour-up-fast|paragraph.txt|pour --pour-direction up --pour-speed 4 --gap 0 --movement-speed-range 0.3-0.9 --movement-easing out_bounce
 pour-unicode|unicode.txt|pour
+print-unicode|unicode.txt|print
 print-always-xterm|colored.txt|--existing-color-handling always --xterm-colors print
 print-anchored|paragraph.txt|--canvas-width 60 --canvas-height 20 --anchor-canvas c --anchor-text c print
 print-basic|basic.txt|print
@@ -123,6 +135,7 @@ randomsequence-nocolor|basic.txt|--no-color randomsequence
 randomsequence-single|single.txt|randomsequence
 randomsequence-xterm|paragraph.txt|--xterm-colors randomsequence --speed 0.05
 randomsequence-unicode|unicode.txt|randomsequence
+rings-unicode|unicode.txt|rings
 rings-basic|basic.txt|rings
 rings-custom|paragraph.txt|rings --ring-colors ff0000 00ff00 --ring-gap 0.2 --spin-duration 50 --spin-speed 0.5-2.0 --disperse-duration 50 --spin-disperse-cycles 2 --final-gradient-direction horizontal
 rings-dynamic|colored.txt|--existing-color-handling dynamic rings --spin-duration 60 --disperse-duration 60
@@ -149,6 +162,7 @@ smoke-custom|paragraph.txt|smoke --starting-color 333333 --smoke-symbols + @ % -
 smoke-dynamic|colored.txt|--existing-color-handling dynamic smoke
 smoke-wholecanvas|basic.txt|smoke --use-whole-canvas
 smoke-xterm-anchored|paragraph.txt|--xterm-colors --canvas-width 60 --canvas-height 20 --anchor-canvas c --anchor-text c smoke
+spotlights-unicode|unicode.txt|spotlights --search-duration 60
 spotlights-always-xterm|colored.txt|--existing-color-handling always --xterm-colors spotlights --search-duration 50
 spotlights-anchored|paragraph.txt|--canvas-width 60 --canvas-height 20 --anchor-canvas c --anchor-text c spotlights --search-duration 60
 spotlights-basic|basic.txt|spotlights --search-duration 60
@@ -160,12 +174,14 @@ spray-dynamic|colored.txt|--existing-color-handling dynamic spray
 spray-nw-slow|paragraph.txt|spray --spray-position nw --spray-volume 0.02 --movement-speed-range 0.3-0.8 --movement-easing in_out_quad
 spray-xterm-anchored|paragraph.txt|--xterm-colors --canvas-width 60 --canvas-height 20 --anchor-canvas c --anchor-text c spray --spray-position center
 spray-unicode|unicode.txt|spray
+swarm-unicode|unicode.txt|swarm
 swarm-always-xterm|colored.txt|--existing-color-handling always --xterm-colors swarm
 swarm-anchored|paragraph.txt|--canvas-width 60 --canvas-height 20 --anchor-canvas c --anchor-text c swarm
 swarm-basic|basic.txt|swarm
 swarm-custom|paragraph.txt|swarm --base-color ff0000 00ff00 --flash-color ffffff --swarm-size 0.2 --swarm-coordination 0.5 --swarm-area-count-range 3-6 --final-gradient-stops ff00ff 00ffff --final-gradient-steps 6 --final-gradient-direction vertical
 swarm-dynamic|colored.txt|--existing-color-handling dynamic swarm
 swarm-single|single.txt|swarm
+sweep-unicode|unicode.txt|sweep
 sweep-basic|basic.txt|sweep
 sweep-center|paragraph.txt|sweep --first-sweep-direction center_to_outside --second-sweep-direction outside_to_center
 sweep-custom|paragraph.txt|sweep --sweep-symbols # @ % --first-sweep-direction row_top_to_bottom --second-sweep-direction diagonal_bottom_left_to_top_right --final-gradient-stops ff0000 00ff00 --final-gradient-steps 12 --final-gradient-direction horizontal
@@ -181,6 +197,7 @@ thunderstorm-basic|basic.txt|thunderstorm --storm-time 2
 thunderstorm-custom|paragraph.txt|thunderstorm --storm-time 3 --text-glow-time 1 --spark-glow-time 1 --lightning-color ffff00
 thunderstorm-dynamic|colored.txt|--existing-color-handling dynamic thunderstorm --storm-time 2
 thunderstorm-xterm-anchored|paragraph.txt|--xterm-colors --canvas-width 60 --canvas-height 20 --anchor-canvas c thunderstorm --storm-time 2
+unstable-unicode|unicode.txt|unstable
 unstable-always-xterm|colored.txt|--existing-color-handling always --xterm-colors unstable
 unstable-anchored|paragraph.txt|--canvas-width 60 --canvas-height 20 --anchor-canvas c --anchor-text c unstable
 unstable-basic|basic.txt|unstable
@@ -191,6 +208,7 @@ vhstape-basic|basic.txt|vhstape
 vhstape-dynamic|colored.txt|--existing-color-handling dynamic vhstape --total-glitch-time 150
 vhstape-fast|paragraph.txt|vhstape --total-glitch-time 200 --glitch-line-chance 0.1 --noise-chance 0.01
 vhstape-xterm-anchored|paragraph.txt|--xterm-colors --canvas-width 60 --canvas-height 20 --anchor-canvas c --anchor-text c vhstape --total-glitch-time 150
+waves-unicode|unicode.txt|waves
 waves-basic|basic.txt|waves
 waves-center|paragraph.txt|waves --wave-direction center_to_outside --wave-count 1
 waves-custom|paragraph.txt|waves --wave-symbols ~ - = --wave-gradient-stops ff0000 0000ff --wave-gradient-steps 4 8 --wave-count 2 --wave-length 1 --wave-direction row_top_to_bottom --wave-easing out_bounce --final-gradient-stops 00ff00 --final-gradient-steps 6 --final-gradient-direction vertical

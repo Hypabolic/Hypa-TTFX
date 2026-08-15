@@ -205,8 +205,8 @@ public sealed class Frame
 public sealed class Scene
 {
     public string SceneId { get; }
-    public bool IsLooping { get; }
-    public SyncMetric? Sync { get; }
+    public bool IsLooping { get; set; }
+    public SyncMetric? Sync { get; set; }
     public Easing? Ease { get; }
     public bool NoColor { get; }
     public bool UseXtermColors { get; }
