@@ -63,7 +63,11 @@ def drive(args, resizes=(), cols=80, rows=24, first_delay=0.30, gap=0.05,
           budget=8.0, stdout_pipe=False, slow=False):
     """Run to completion (or budget), applying `resizes`; return the stream."""
     pid, fd, sin_w, out_r = spawn(args, stdout_pipe)
+    # Size the pty before feeding stdin. The child reads all input, then
+    # queries TIOCGWINSZ — so the winsize must be in place before we close
+    # the input pipe and let the effect start.
     set_size(fd, cols, rows)
+    time.sleep(0.02)
     os.write(sin_w, TEXT)
     os.close(sin_w)
 
@@ -128,16 +132,21 @@ def main() -> int:
     check("runs with a resize", runs_in(noisy), 1)
     check("bytes match the undisturbed run", len(noisy), len(quiet))
 
+    # Throttle the tty read so a fast AOT host cannot finish wipe before the
+    # first TIOCSWINSZ. first_delay must land while the child is still running.
+    tty = dict(slow=True, first_delay=0.15, budget=12.0)
+
     print("tty, resize that cannot move a cell")
-    check("runs", runs_in(drive(["--seed", "1", "wipe"], resizes=[(100, 30)])), 1)
+    check("runs", runs_in(drive(["--seed", "1", "wipe"], resizes=[(100, 30)], **tty)), 1)
 
     print("tty, resize that changes the canvas")
-    changed = drive(["--seed", "1", "wipe"], resizes=[(8, 24)])
+    changed = drive(["--seed", "1", "wipe"], resizes=[(8, 24)], **tty)
     check("runs", runs_in(changed), 2)
 
     print("tty, burst of resizes during a drag")
     burst = drive(["--seed", "1", "wipe"],
-                  resizes=[(9, 24), (8, 24), (7, 24), (6, 24), (7, 24), (8, 24)], gap=0.02)
+                  resizes=[(9, 24), (8, 24), (7, 24), (6, 24), (7, 24), (8, 24)],
+                  gap=0.02, **tty)
     rebuilds = runs_in(burst)
     ok = rebuilds <= 3
     failures += not ok

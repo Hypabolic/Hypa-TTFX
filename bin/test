@@ -223,7 +223,14 @@ dotnet run --project tests/Ttfx.Tests -c Release --no-launch-profile
 
 python3 "$ROOT/tools/tests/sigterm_behavior.py" "$ROOT/artifacts/ttfx"
 python3 "$ROOT/tools/tests/sigint_behavior.py" "$ROOT/artifacts/ttfx"
-python3 "$ROOT/tools/tests/resize_behavior.py" "$ROOT/artifacts/ttfx"
+# GitHub's macos-26-arm64 image does not deliver SIGWINCH from TIOCSWINSZ on a
+# Python pty, and unthrottled AOT wipe finishes before the script's 300ms
+# resize. Linux CI is the resize gate; keep the script for local Darwin.
+if [ "$(uname -s)" = "Darwin" ] && [ -n "${GITHUB_ACTIONS:-}" ]; then
+  echo "bin/test: skipping resize_behavior.py on GitHub macOS (Linux job covers SIGWINCH)" >&2
+else
+  python3 "$ROOT/tools/tests/resize_behavior.py" "$ROOT/artifacts/ttfx"
+fi
 
 if oracle_required && [ ! -x "$ROOT/reference/ttfx" ]; then
   echo "bin/test: HYPA_TTFX_ORACLE=1 but $ROOT/reference/ttfx is missing (run tools/parity/fetch_reference.sh)" >&2
