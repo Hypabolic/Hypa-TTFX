@@ -50,23 +50,54 @@ if [ -z "$rid" ]; then
 fi
 
 pack="Microsoft.NETCore.App.Runtime.NativeAOT.${rid}"
-pack_found=0
-base_path="$(dotnet --info | awk -F': *' '/^[[:space:]]*Base Path:/{print $2; exit}')"
-if [ -n "$base_path" ]; then
-  packs_dir="$(cd "${base_path}/../../packs" 2>/dev/null && pwd || true)"
-  if [ -n "${packs_dir:-}" ] && [ -d "${packs_dir}/${pack}" ]; then
-    pack_found=1
+
+pack_installed() {
+  local name="$1"
+  local base_path packs_dir nuget_root nuget_name
+  base_path="$(dotnet --info | awk -F': *' '/^[[:space:]]*Base Path:/{print $2; exit}')"
+  if [ -n "$base_path" ]; then
+    packs_dir="$(cd "${base_path}/../../packs" 2>/dev/null && pwd || true)"
+    if [ -n "${packs_dir:-}" ] && [ -d "${packs_dir}/${name}" ]; then
+      return 0
+    fi
   fi
-fi
-if [ "$pack_found" -eq 0 ]; then
   nuget_root="$(dotnet nuget locals global-packages --list 2>/dev/null | awk -F': ' '{print $2; exit}' || true)"
-  nuget_name="$(printf '%s' "$pack" | tr '[:upper:]' '[:lower:]')"
+  nuget_name="$(printf '%s' "$name" | tr '[:upper:]' '[:lower:]')"
   if [ -n "${nuget_root:-}" ] && [ -d "${nuget_root}/${nuget_name}" ]; then
-    pack_found=1
+    return 0
   fi
-fi
-if [ "$pack_found" -eq 0 ]; then
-  missing "$pack"
+  return 1
+}
+
+# Desktop SDK installers ship this pack under packs/. actions/setup-dotnet does
+# not; download the matching runtime pack into the NuGet cache so publish works
+# on a clean CI image without adding a PackageReference to the product.
+if ! pack_installed "$pack"; then
+  runtime_ver="$(dotnet --list-runtimes | awk '/^Microsoft.NETCore.App 10\./ { print $2 }' | sort -V | tail -1)"
+  if [ -z "${runtime_ver:-}" ]; then
+    missing ".NET 10 runtime (dotnet --list-runtimes)"
+  fi
+  tmp="$(mktemp -d)"
+  # Keep this project outside the repo so Directory.Build.props does not apply.
+  cat > "$tmp/aot-pack.csproj" <<EOF
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageDownload Include="${pack}" Version="[${runtime_ver}]" />
+  </ItemGroup>
+</Project>
+EOF
+  echo "check-prereqs: downloading ${pack} ${runtime_ver}" >&2
+  if ! dotnet restore "$tmp/aot-pack.csproj" --nologo; then
+    rm -rf "$tmp"
+    missing "$pack"
+  fi
+  rm -rf "$tmp"
+  if ! pack_installed "$pack"; then
+    missing "$pack"
+  fi
 fi
 
 # StripSymbols=true: Linux ILC needs objcopy/llvm-objcopy. Apple ILC uses

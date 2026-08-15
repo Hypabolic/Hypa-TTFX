@@ -23,6 +23,8 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
+      - name: Install Native AOT native toolchain
+        run: sudo apt-get update && sudo apt-get install -y clang zlib1g-dev binutils
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
       - name: Run bin/test (Linux oracle gate)
@@ -72,6 +74,8 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
+      - name: Install Native AOT native toolchain
+        run: sudo apt-get update && sudo apt-get install -y clang zlib1g-dev binutils
       - name: Publish linux-x64
         run: ./bin/build linux-x64
       - uses: actions/upload-artifact@v4
@@ -87,6 +91,8 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
+      - name: Install Native AOT native toolchain
+        run: sudo apt-get update && sudo apt-get install -y clang zlib1g-dev binutils
       - name: Publish linux-arm64
         run: ./bin/build linux-arm64
       - uses: actions/upload-artifact@v4
