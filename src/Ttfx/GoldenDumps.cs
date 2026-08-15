@@ -14,7 +14,7 @@ namespace Ttfx;
 /// </summary>
 internal static class GoldenDumps
 {
-    internal static readonly Easing[] EasingGoldenOrder =
+    internal static Easing[] EasingGoldenOrder() =>
     [
         Easing.Linear,
         Easing.InSine,
@@ -54,22 +54,29 @@ internal static class GoldenDumps
 
     internal static int WriteEasing(Stream stdout)
     {
-        foreach (Easing easing in EasingGoldenOrder)
+        Easing[] order = EasingGoldenOrder();
+        byte[] buf = new byte[order.Length * 1001 * 8];
+        int offset = 0;
+        foreach (Easing easing in order)
         {
             for (int i = 0; i <= 1000; i++)
             {
-                double p = i / 1000.0;
-                double actual = easing.Ease(p);
-                byte[] le = BitConverter.GetBytes(actual);
-                if (!BitConverter.IsLittleEndian)
+                double actual = easing.Ease(i / 1000.0);
+                if (!BitConverter.TryWriteBytes(buf.AsSpan(offset), actual))
                 {
-                    Array.Reverse(le);
+                    throw new InvalidOperationException("easing dump write");
                 }
 
-                stdout.Write(le);
+                if (!BitConverter.IsLittleEndian)
+                {
+                    buf.AsSpan(offset, 8).Reverse();
+                }
+
+                offset += 8;
             }
         }
 
+        stdout.Write(buf, 0, offset);
         stdout.Flush();
         return 0;
     }

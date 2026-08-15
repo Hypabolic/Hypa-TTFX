@@ -37,9 +37,11 @@ internal static class Program
         }
 
         // Hidden golden dumps: AOT-published binary, no input required.
+        // Use write(2), not Console.OpenStandardOutput — osx-arm64 ILC
+        // FailFast/AVs on the Console stream when stdout is a pipe.
         if (root.EasingGoldenDump)
         {
-            using Stream stdout = Console.OpenStandardOutput();
+            using Stream stdout = StdIo.OpenStdout();
             return GoldenDumps.WriteEasing(stdout);
         }
 
