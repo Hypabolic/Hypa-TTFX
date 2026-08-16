@@ -12,7 +12,7 @@ namespace Ttfx.Utils;
 /// Transcription rule: Python <c>x ** n</c> routes through C <c>pow()</c> even for int
 /// exponents, so every <c>**</c> here is <c>Math.Pow</c>, never <c>x * x</c> or
 /// <c>Math.Sqrt</c> for <c>powf(0.5)</c> — they can differ by ULPs and coordinate
-/// quantization sits downstream (plan.md §5.20). Circ uses Rust <c>.sqrt()</c>;
+/// quantization sits downstream. Circ uses Rust <c>.sqrt()</c>;
 /// that one IS <c>Math.Sqrt</c>.
 /// </remarks>
 public readonly record struct Easing(EasingKind Kind, double X1 = 0, double Y1 = 0, double X2 = 0, double Y2 = 0)

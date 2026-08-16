@@ -26,7 +26,7 @@ belong upstream.
 |---|---|---|
 | Random number generator | xoshiro256++ (same as ttfx) | Inherited from ttfx; `--seed` matches ttfx and this port, not Python TTE's Mersenne Twister |
 | Broken-pipe exit status | 0 | Upstream Python swallows `EPIPE`; we match that contract |
-| SIGTERM exit status | Matches ttfx (signal 15 via `WIFSIGNALED`) | Verified in issue 0012; not a divergence |
+| SIGTERM exit status | Matches ttfx (signal 15 via `WIFSIGNALED`) | Not a divergence |
 | Shell completions | Hand-written templates | Zero NuGet packages — no `clap_complete`; text differs from ttfx's generated scripts |
 | Plugin effects | Not supported | No Python interpreter to load them |
 | Cell width | One codepoint = one cell (`Rune`) | Faithfully reproduces upstream; no `wcwidth` |

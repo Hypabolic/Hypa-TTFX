@@ -5,7 +5,7 @@
 #
 # Installs the oracle at reference/ttfx — never on PATH, never into artifacts/.
 # The C# AOT binary lives at artifacts/ttfx; both are named ttfx and must stay
-# at distinct, explicitly-referenced paths (plan §11 decision 10).
+# at distinct, explicitly-referenced paths.
 set -euo pipefail
 
 ROOT="$(CDPATH= cd -- "${BASH_SOURCE[0]%/*}/../.." && pwd)"

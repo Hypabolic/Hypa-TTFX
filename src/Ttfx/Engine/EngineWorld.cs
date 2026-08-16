@@ -45,7 +45,7 @@ public sealed class NoopHooks : IEffectHooks
 /// Python executes event actions synchronously at the emission point, deep in
 /// the middle of Path.step / Motion.move / Animation.step_animation, and those
 /// actions reentrantly mutate the same structures being stepped. To preserve
-/// that observable ordering (plan.md §4.2), all stepping logic lives here:
+/// that observable ordering, all stepping logic lives here:
 /// state is re-fetched by id after every emission point, and segment walks are
 /// index-based so reentrant list mutation behaves like Python list iteration.
 /// Transcribed from <c>engine/ctx.rs</c>.

@@ -244,7 +244,7 @@ public static class Geometry
     /// <summary>
     /// find_length_of_bezier_curve: 10-sample polyline that stops at t=0.9 — the
     /// final t=0.9..1.0 span is deliberately (faithfully) omitted, systematically
-    /// underestimating lengths. Do not fix (plan.md §5.4).
+    /// underestimating lengths. Do not fix.
     /// </summary>
     public static double FindLengthOfBezierCurve(Coord start, IReadOnlyList<Coord> control, Coord end)
     {

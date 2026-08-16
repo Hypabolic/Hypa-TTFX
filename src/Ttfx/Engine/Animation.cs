@@ -25,7 +25,7 @@ public enum SyncMetric
 
 /// <summary>
 /// The precomputed ANSI string for one cell, stored as UTF-8 bytes.
-/// Representation half of Rust's inline/heap union is dropped (plan §5.8);
+/// Representation half of Rust's inline/heap union is dropped;
 /// the cached byte[] is the semantic half.
 /// Transcribed from <c>engine/animation.rs</c>.
 /// </summary>

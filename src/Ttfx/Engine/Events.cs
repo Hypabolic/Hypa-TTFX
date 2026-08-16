@@ -8,8 +8,8 @@ namespace Ttfx.Engine;
 /// Event system, ported from engine/base_character.py EventHandler.
 ///
 /// Storage is plain data; dispatch lives on EngineWorld so that actions
-/// execute inline at the exact upstream emission points, reentrantly
-/// (plan.md §4.2). Effect callbacks are (id, payload) records — never
+/// execute inline at the exact upstream emission points, reentrantly.
+/// Effect callbacks are (id, payload) records — never
 /// closures that capture loop variables.
 /// Transcribed from <c>engine/events.rs</c>.
 /// </summary>

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Everything CI runs, in one command. Grows phase by phase (plan §7.7).
+# Everything CI runs, in one command.
 set -euo pipefail
 
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
@@ -156,10 +156,10 @@ for rel, markers, require in SITES:
     if not any(m in text for m in markers):
         continue
     if re.search(require, text) is None:
-        hits.append(f"{rel}: translated checklist §1 site must use {require}")
+        hits.append(f"{rel}: this site must use {require}")
 
 if hits:
-    print("checklist §1 TruncToI64 missing:", file=sys.stderr)
+    print("TruncToI64 missing:", file=sys.stderr)
     print("\n".join(hits), file=sys.stderr)
     sys.exit(1)
 PY
@@ -210,7 +210,7 @@ if easing.is_file():
             hits.append(f"src/Ttfx/Utils/Easing.cs:{i}: Math.Sqrt only allowed on Circ .sqrt() lines: {line.rstrip()}")
 
 if hits:
-    print("checklist §2 powf/hypot substitution:", file=sys.stderr)
+    print("powf/hypot substitution:", file=sys.stderr)
     print("\n".join(hits), file=sys.stderr)
     sys.exit(1)
 PY

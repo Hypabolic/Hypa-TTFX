@@ -4,7 +4,7 @@ using System.Diagnostics;
 namespace Ttfx.Engine;
 
 /// <summary>
-/// Virtual/real clock (plan.md §4.7). Matrix reads wall time, thunderstorm
+/// Virtual/real clock. Matrix reads wall time, thunderstorm
 /// reads monotonic time; the parity harness swaps in the virtual variant.
 /// Transcribed from <c>engine/ctx.rs</c>.
 /// </summary>

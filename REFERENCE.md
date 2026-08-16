@@ -34,7 +34,7 @@ C# AOT binary at `artifacts/ttfx`. Neither is placed on `PATH`.
 
 This is the TTE revision `ttfx` @ `6e24dac` itself pins (see that tree's
 `tools/parity/fetch_reference.sh` and `REFERENCE.md`). It is recorded here for
-provenance; this issue does not fetch the Python tree.
+provenance; this repo does not fetch the Python tree.
 
 ## Copied assets
 
@@ -54,7 +54,7 @@ Do not edit them in this repo to "fix" anything — they are the inherited contr
 | `tools/tests/bench_full.py` | `tools/tests/bench_full.py` |
 | `docs/ordering-inventory.md` | `docs/ordering-inventory.md` |
 
-## Original files in this slice (not copies)
+## Original files in this repo (not copies)
 
 | Path | Role |
 |---|---|

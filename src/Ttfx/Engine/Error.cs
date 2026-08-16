@@ -15,7 +15,7 @@ public class EngineException : Exception
 }
 
 /// <summary>
-/// Invariant failure. <c>Program.Main</c> does not catch this (plan §5.6).
+/// Invariant failure. <c>Program.Main</c> does not catch this.
 /// </summary>
 public sealed class EngineInvariantException : Exception
 {

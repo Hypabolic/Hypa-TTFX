@@ -6,7 +6,7 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <!-- C# compiler warnings only. Do NOT let this escalate ILC/ILLink trim and AOT
          warnings, which would fail every publish on a clean tree; those are gated
-         separately per §6, milestone by milestone. -->
+         separately. -->
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <ILLinkTreatWarningsAsErrors>false</ILLinkTreatWarningsAsErrors>
     <IlcTreatWarningsAsErrors>false</IlcTreatWarningsAsErrors>

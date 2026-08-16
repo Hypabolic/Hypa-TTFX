@@ -5,9 +5,9 @@ namespace Ttfx.Utils;
 
 /// <summary>
 /// Spanning-tree generators, ported from utils/spanningtree/. AldousBroder is
-/// deliberately not ported: no shipped effect uses it (plan.md §5 divergences).
+/// deliberately not ported: no shipped effect uses it.
 ///
-/// Canonical ordering note (plan.md §4.3): <c>EffectCharacter.links</c> is a Python
+/// Canonical ordering note: <c>EffectCharacter.links</c> is a Python
 /// set; BreadthFirst iterates it. Our canonical order is ascending
 /// character_id — links are kept sorted-by-id on insert, and the parity shim
 /// patches the Python side to <c>sorted(links, key=character_id)</c>.

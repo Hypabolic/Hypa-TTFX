@@ -58,7 +58,7 @@ public sealed class EffectCharacter
     public bool UsesInputPreexistingColors { get; set; }
 
     /// <summary>
-    /// Spanning-tree links, kept sorted by <c>CharacterId</c> (plan.md §4.3).
+    /// Spanning-tree links, kept sorted by <c>CharacterId</c>.
     /// </summary>
     public List<CharId> Links { get; } = new List<CharId>();
 

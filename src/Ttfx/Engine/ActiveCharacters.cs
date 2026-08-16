@@ -5,8 +5,8 @@ namespace Ttfx.Engine;
 
 /// <summary>
 /// Ordered set for active characters. Iteration is ascending
-/// <c>CharacterId</c> (the Python-compatible field), never arena index
-/// (plan.md §4.3 / §5.8). Bitmap promotion is dropped.
+/// <c>CharacterId</c> (the Python-compatible field), never arena index.
+/// Bitmap promotion is dropped.
 /// Transcribed from <c>engine/active_characters.rs</c>.
 /// </summary>
 public sealed class ActiveCharacters

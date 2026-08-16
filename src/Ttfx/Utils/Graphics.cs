@@ -53,7 +53,7 @@ public abstract class ColorArg : IEquatable<ColorArg>
 }
 
 /// <summary>
-/// Color. Equality is on <c>color_arg</c> (plan §5.10 / graphics.rs PartialEq):
+/// Color. Equality is on <c>color_arg</c> (graphics.rs PartialEq):
 /// <c>Color(255) != Color("ffffff")</c> even when RGB matches.
 /// <c>#000000</c> vs <c>000000</c> compare equal because Hex stores the stripped rgb_color.
 /// </summary>
@@ -229,8 +229,7 @@ public sealed class CoordColorMap
 
 /// <summary>
 /// graphics.Gradient. The spectrum is NOT float lerp: channel deltas use
-/// Python integer floor division and the exact end stop is appended per pair
-/// (plan.md §5.2).
+/// Python integer floor division and the exact end stop is appended per pair.
 /// </summary>
 public sealed class Gradient
 {

@@ -236,7 +236,7 @@ public sealed class Preprocessor
     /// <summary>
     /// build_character: allocates an id (even for characters later discarded),
     /// captures active colors, bumps the color frequency at CREATION time (even
-    /// if a later cursor write overwrites the cell — see plan.md §5.13).
+    /// if a later cursor write overwrites the cell).
     /// </summary>
     private CharId BuildCharacter(string symbol, ActiveState state)
     {

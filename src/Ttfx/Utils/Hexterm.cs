@@ -7,7 +7,6 @@ namespace Ttfx.Utils;
 /// <summary>
 /// xterm-256 -&gt; RGB mapping, ported from utils/hexterm.py.
 /// The table is GENERATED from the pinned reference — do not hand-edit.
-/// hex_to_xterm is issue 0005.
 /// </summary>
 public static class Hexterm
 {

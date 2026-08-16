@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Per-RID transcendental measurement (plan §7.7): dump easing at 1e-3 steps
+# Per-RID transcendental measurement: dump easing at 1e-3 steps
 # and the geometry lattice from both the AOT-published C# binary and the
 # Rust reference examples, then compare raw floats vs the quantized lattice.
 set -euo pipefail

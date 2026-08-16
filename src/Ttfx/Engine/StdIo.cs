@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 namespace Ttfx.Engine;
 
 /// <summary>
-/// Broken-pipe exit is an accepted divergence: 0, not 141 (plan.md §8.2).
+/// Broken-pipe exit is an accepted divergence: 0, not 141.
 /// Writes go through write(2) so EPIPE (errno 32) is distinguished from
 /// disk-full and other genuine write failures — Stream.Write's HResult is
 /// not reliably errno after a managed write.
@@ -18,7 +18,7 @@ public sealed class BrokenPipeException : IOException
     }
 }
 
-/// <summary>Raw stdout via write(2). Transcribed intent from plan.md §8.2.</summary>
+/// <summary>Raw stdout via write(2).</summary>
 public static partial class StdIo
 {
     public const int StdoutFd = 1;

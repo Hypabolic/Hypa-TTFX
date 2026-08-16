@@ -8,7 +8,7 @@ namespace Ttfx.Engine;
 /// <summary>
 /// POSIX signal flags and registrations. Handlers run on a thread-pool thread;
 /// flags are Interlocked so the run loop cannot miss a signal under optimized
-/// AOT (plan.md §8.2). Registrations are held in statics for process lifetime.
+/// AOT. Registrations are held in statics for process lifetime.
 /// Transcribed from <c>lib.rs</c>.
 /// </summary>
 public static partial class Signals
@@ -27,7 +27,7 @@ public static partial class Signals
     /// <summary>
     /// SIGINT is recorded and checked from the run loop so teardown (cursor
     /// restore) happens through normal control flow — Drop alone would not run on
-    /// a raw signal exit (plan.md §8).
+    /// a raw signal exit.
     /// </summary>
     public static void InstallSigintHandler()
     {
@@ -74,7 +74,7 @@ public static partial class Signals
         }
 
         // CA1416: PosixSignal.SIGWINCH is annotated Windows-unsupported; this
-        // project is POSIX-only (plan.md §1). The runtime guard stays.
+        // project is POSIX-only. The runtime guard stays.
         if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS() || OperatingSystem.IsFreeBSD())
         {
 #pragma warning disable CA1416
@@ -111,7 +111,7 @@ public static partial class Signals
     /// the default action and die from it. A supervisor then sees a terminated
     /// child, exactly as it would from the redirected run that never installs a
     /// handler at all. SIGINT does not go through here — upstream exits 1 on
-    /// KeyboardInterrupt and parity outranks the convention (plan.md §8).
+    /// KeyboardInterrupt and parity outranks the convention.
     /// </summary>
     [DoesNotReturn]
     public static void DieFromSigterm()

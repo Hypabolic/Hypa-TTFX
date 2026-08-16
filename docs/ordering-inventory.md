@@ -1,4 +1,4 @@
-# Unordered-iteration inventory (plan.md §4.3)
+# Unordered-iteration inventory
 
 Every site where upstream TTE iterates an unordered container (set) or relies
 on dict insertion order, with the canonical deterministic order used by ttfx
@@ -57,10 +57,10 @@ Audited, no patch needed (set iteration present but order-unobservable):
 | laseretch | `color_shifted_chars: set[...]` declared at effect_laseretch.py:336 | dead code upstream — the set is never read, written, or iterated. `beam_chars` is a list. |
 | thunderstorm | none | `pending_strike_chars` / `active_strike_chars` / `pending_glow_chars` are all lists (effect_thunderstorm.py:194-198); particle pools iterate their own deques. |
 
-## lru_cache mutation quirk (plan §5 addendum)
+## lru_cache mutation quirk
 
-Plan.md's "Deliberate divergences" claims the geometry `lru_cache` layers are
-value-transparent. **False for swarm**: `SwarmIterator.build` calls
+The geometry `lru_cache` layers are not always value-transparent.
+**False for swarm**: `SwarmIterator.build` calls
 `random.shuffle(...)` directly on the list returned by the cached
 `find_coords_on_circle`, mutating the cache entry in place. Later calls with
 the same focus coord return the *previously shuffled* list. ttfx reproduces

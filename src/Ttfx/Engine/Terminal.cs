@@ -377,7 +377,7 @@ public sealed class Terminal
 
     /// <summary>
     /// Paint the visible characters into the reusable cell buffer using the
-    /// canonical (layer, character_id) painter order (plan.md §4.3).
+    /// canonical (layer, character_id) painter order.
     /// </summary>
     private (int Width, int Height) UpdateRenderCells()
     {

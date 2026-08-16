@@ -14,7 +14,7 @@ namespace Ttfx.Utils;
 /// The helper semantics here are the parity contract: tools/parity/shim.py
 /// implements the exact same algorithms in Python and monkeypatches the
 /// <c>random</c> module with them, so both implementations draw identical
-/// sequences given the same seed (plan.md §7). Do not change any helper's
+/// sequences given the same seed. Do not change any helper's
 /// algorithm without updating the shim in lockstep.
 /// Transcribed from <c>utils/rng.rs</c>.
 /// </summary>
