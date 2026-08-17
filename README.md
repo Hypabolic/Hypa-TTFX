@@ -8,6 +8,42 @@ printf 'Hello\n' | ./artifacts/ttfx wipe
 fortune | ./artifacts/ttfx --random-effect
 ```
 
+## Examples
+
+Every clip is [`hypa-logo.txt`](hypa-logo.txt) piped through that effect with `--seed 42`.
+
+<p align="center">
+  <img src="docs/examples/wipe.gif" alt="wipe">
+</p>
+
+| beams | binarypath | blackhole |
+| :---: | :---: | :---: |
+| ![beams](docs/examples/beams.gif) | ![binarypath](docs/examples/binarypath.gif) | ![blackhole](docs/examples/blackhole.gif) |
+| **bouncyballs** | **bubbles** | **burn** |
+| ![bouncyballs](docs/examples/bouncyballs.gif) | ![bubbles](docs/examples/bubbles.gif) | ![burn](docs/examples/burn.gif) |
+| **colorshift** | **crumble** | **decrypt** |
+| ![colorshift](docs/examples/colorshift.gif) | ![crumble](docs/examples/crumble.gif) | ![decrypt](docs/examples/decrypt.gif) |
+| **errorcorrect** | **expand** | **fireworks** |
+| ![errorcorrect](docs/examples/errorcorrect.gif) | ![expand](docs/examples/expand.gif) | ![fireworks](docs/examples/fireworks.gif) |
+| **highlight** | **laseretch** | **matrix** |
+| ![highlight](docs/examples/highlight.gif) | ![laseretch](docs/examples/laseretch.gif) | ![matrix](docs/examples/matrix.gif) |
+| **middleout** | **orbittingvolley** | **overflow** |
+| ![middleout](docs/examples/middleout.gif) | ![orbittingvolley](docs/examples/orbittingvolley.gif) | ![overflow](docs/examples/overflow.gif) |
+| **pour** | **print** | **rain** |
+| ![pour](docs/examples/pour.gif) | ![print](docs/examples/print.gif) | ![rain](docs/examples/rain.gif) |
+| **randomsequence** | **rings** | **scattered** |
+| ![randomsequence](docs/examples/randomsequence.gif) | ![rings](docs/examples/rings.gif) | ![scattered](docs/examples/scattered.gif) |
+| **slice** | **slide** | **smoke** |
+| ![slice](docs/examples/slice.gif) | ![slide](docs/examples/slide.gif) | ![smoke](docs/examples/smoke.gif) |
+| **spotlights** | **spray** | **swarm** |
+| ![spotlights](docs/examples/spotlights.gif) | ![spray](docs/examples/spray.gif) | ![swarm](docs/examples/swarm.gif) |
+| **sweep** | **synthgrid** | **thunderstorm** |
+| ![sweep](docs/examples/sweep.gif) | ![synthgrid](docs/examples/synthgrid.gif) | ![thunderstorm](docs/examples/thunderstorm.gif) |
+| **unstable** | **vhstape** | **waves** |
+| ![unstable](docs/examples/unstable.gif) | ![vhstape](docs/examples/vhstape.gif) | ![waves](docs/examples/waves.gif) |
+
+Regenerate with `./bin/build` and `tools/render_examples.py` (Pillow + ffmpeg).
+
 ## Credit where it's due
 
 **This is a port of a port.** Every effect, the animation engine, and the CLI are
