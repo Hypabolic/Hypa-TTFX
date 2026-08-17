@@ -1,7 +1,7 @@
 # hypa-ttfx
 
-A C# / .NET 10 Native-AOT parity port of [ttfx](https://github.com/omacom-io/ttfx) — a
-single-binary terminal text-effects CLI with 37 effects. Pipe text in, pick an effect:
+A C# / .NET 10 Native-AOT terminal text-effects CLI and library with 37 effects.
+Pipe text in, pick an effect:
 
 ```sh
 printf 'Hello\n' | ./artifacts/ttfx wipe
@@ -44,17 +44,15 @@ Every clip is [`hypa-logo.txt`](hypa-logo.txt) piped through that effect with `-
 
 Regenerate with `./bin/build` and `tools/render_examples.py` (Pillow + ffmpeg).
 
-## Credit where it's due
+## Origins
 
-**This is a port of a port.** Every effect, the animation engine, and the CLI are
-[ChrisBuilds](https://github.com/ChrisBuilds)' design in
-[TerminalTextEffects](https://github.com/ChrisBuilds/terminaltexteffects) (TTE).
-[ttfx](https://github.com/omacom-io/ttfx) translated that work to Rust; this project
-translates ttfx to C# and adds nothing to the art. If you like what you see here, star
-the upstream projects.
+hypa-ttfx began as a C# / .NET Native-AOT port of
+[ttfx](https://github.com/omacom-io/ttfx), itself derived from
+[TerminalTextEffects](https://github.com/ChrisBuilds/terminaltexteffects)
+by [ChrisBuilds](https://github.com/ChrisBuilds). It is now a standalone
+package and continues to diverge from those sources.
 
-Attribution details are in [LICENSE](LICENSE) and [NOTICE](NOTICE). Effect *ideas*
-belong upstream.
+Legal attribution is in [LICENSE](LICENSE) and [NOTICE](NOTICE).
 
 ## Deliberate divergences
 
@@ -139,6 +137,12 @@ printf 'Hello\n' | ttfx wipe
 This repo consumes zero NuGet packages — everything comes from
 `Microsoft.NETCore.App`. Downstream apps add `Hypa.Ttfx` as a package
 reference; that is the supported way to reuse the engine.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for build, test, and pull-request
+expectations, and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Security reports
+go through [SECURITY.md](SECURITY.md), not a public issue.
 
 ## Releasing
 

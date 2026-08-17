@@ -1,0 +1,16 @@
+name: Docs
+description: README, examples, contributing, or XML/API docs
+title: "[docs] "
+labels: ["documentation"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What should change?
+    validations:
+      required: true
+  - type: input
+    id: where
+    attributes:
+      label: Where
+      placeholder: README.md, CONTRIBUTING.md, docs/examples, …

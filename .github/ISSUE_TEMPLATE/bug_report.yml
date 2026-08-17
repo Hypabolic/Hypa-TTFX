@@ -1,0 +1,69 @@
+name: Bug report
+description: Something does not work as expected
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. A seed, the exact command or API call, and the
+        input text are the fastest path to a fix.
+  - type: dropdown
+    id: surface
+    attributes:
+      label: How are you using hypa-ttfx?
+      options:
+        - Native-AOT CLI (`artifacts/ttfx` or a GitHub Release binary)
+        - `dotnet tool` (`Hypa.Ttfx.Tool`)
+        - Library (`Hypa.Ttfx` / `TextEffects`)
+        - From source
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: `ttfx --version`, NuGet version, or git SHA
+      placeholder: "0.3.1"
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: OS and RID
+      placeholder: "macOS 15 / osx-arm64"
+    validations:
+      required: true
+  - type: input
+    id: effect
+    attributes:
+      label: Effect
+      placeholder: wipe
+  - type: textarea
+    id: command
+    attributes:
+      label: Command or API call
+      description: Include flags, seed, canvas size, and effect options.
+      placeholder: |
+        printf 'Hello\n' | ttfx --seed 42 --frame-rate 0 wipe
+        // or TextEffects.Render("wipe", "Hello\n", new TextEffectOptions { Seed = 42 });
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual
+      description: Paste output, exception text, or describe the frames.
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Extra context
+      description: Logs, first divergent frame, or a reduced input file.

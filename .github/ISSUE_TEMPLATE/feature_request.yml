@@ -1,0 +1,34 @@
+name: Feature request
+description: A new effect, option, or library API
+title: "[feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        hypa-ttfx is a standalone package. Proposals do not need to match
+        ttfx or TerminalTextEffects.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: CLI flag, `TextEffects` API, new effect, or docs.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered
+  - type: checkboxes
+    id: breaking
+    attributes:
+      label: Compatibility
+      options:
+        - label: This would change existing CLI or library behavior
+        - label: I am willing to open a pull request

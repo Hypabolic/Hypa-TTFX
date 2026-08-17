@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Contributing guide
+    url: https://github.com/Hypabolic/Hypa-TTFX/blob/main/CONTRIBUTING.md
+    about: Build, test, and pull-request expectations
+  - name: Security report
+    url: https://github.com/Hypabolic/Hypa-TTFX/security/advisories/new
+    about: Privately report a vulnerability (do not file a public issue)
