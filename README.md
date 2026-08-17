@@ -89,15 +89,80 @@ what has actually been measured.
 `./bin/test` runs the full gate: unit goldens, AOT publish, CLI corpus, signal tests, and
 (on Linux or when `reference/ttfx` is present on macOS) byte-exact parity suites.
 
+## Library
+
+Other .NET 10+ programs consume the engine as `Hypa.Ttfx`:
+
+```sh
+dotnet add package Hypa.Ttfx
+```
+
+```csharp
+using Ttfx;
+
+IReadOnlyList<string> frames = TextEffects.Render(
+    "wipe",
+    "Hello from .NET\n",
+    new TextEffectOptions { Seed = 42 });
+
+foreach (string frame in TextEffects.EnumerateFrames("smoke", "Hello\n", new TextEffectOptions
+{
+    Seed = 42,
+    EffectArguments = ["--final-gradient-stops", "8A008A", "00D1FF"],
+}))
+{
+    Console.Write(frame);
+}
+```
+
+`Render` / `EnumerateFrames` use a virtual clock and ignore the process TTY
+(canvas sizes to the input). `TextEffects.Run` writes a live animation to a
+stream. Per-effect flags are the same tokens as the CLI.
+
+The CLI is also a `dotnet tool` (framework-dependent; Native-AOT builds are
+the GitHub Release assets):
+
+```sh
+dotnet tool install -g Hypa.Ttfx.Tool
+printf 'Hello\n' | ttfx wipe
+```
+
 ## Building
 
 ```sh
 ./bin/build              # AOT publish to artifacts/ttfx (host RID)
 ./bin/build linux-x64    # cross-RID publish when toolchain is available
 ./bin/test
+./bin/pack               # Hypa.Ttfx + Hypa.Ttfx.Tool into artifacts/nuget
 ```
 
-Zero NuGet packages — everything comes from `Microsoft.NETCore.App`.
+This repo consumes zero NuGet packages — everything comes from
+`Microsoft.NETCore.App`. Downstream apps add `Hypa.Ttfx` as a package
+reference; that is the supported way to reuse the engine.
+
+## Releasing
+
+Version lives in `Directory.Build.props`. A tag `vX.Y.Z` (semver, optional
+prerelease suffix) runs `.github/workflows/release.yml`: macOS + Linux test
+gates, Native-AOT binaries for `osx-arm64` / `osx-x64` / `linux-x64` /
+`linux-arm64`, both nupkgs, a GitHub Release, nuget.org, and GitHub Packages.
+
+```sh
+# bump <Version> in Directory.Build.props, commit, then:
+git tag v0.3.1
+git push origin v0.3.1
+```
+
+One-time nuget.org setup (Trusted Publishing — no long-lived API key):
+
+1. On nuget.org → Trusted Publishing, add a policy for this repo, workflow
+   file `release.yml`, environment `release`.
+2. Store your nuget.org **username** (profile name, not email) as the
+   `NUGET_USER` Actions secret.
+3. Optional fallback: `NUGET_API_KEY` if OIDC is not available yet.
+
+`workflow_dispatch` stamps a version and uploads artifacts; turn on
+`publish` only when you intend to cut the release.
 
 ## Usage
 

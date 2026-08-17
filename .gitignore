@@ -31,11 +31,11 @@ x86/
 [Aa][Rr][Mm]64/
 bld/
 [Bb]in/
-# Repo-root helper scripts must stay tracked (bin/build, bin/test, bin/release).
+# Repo-root helper scripts must stay tracked (bin/build, bin/test, bin/pack).
 !/bin/
 !/bin/build
 !/bin/test
-!/bin/release
+!/bin/pack
 [Oo]bj/
 [Ll]og/
 [Ll]ogs/

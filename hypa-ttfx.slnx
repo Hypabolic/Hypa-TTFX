@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/Ttfx/Ttfx.csproj" />
+    <Project Path="src/Ttfx.Cli/Ttfx.Cli.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Ttfx.Tests/Ttfx.Tests.csproj" />

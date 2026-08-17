@@ -102,7 +102,7 @@ fi
 
 # StripSymbols=true: Linux ILC needs objcopy/llvm-objcopy. Apple ILC uses
 # dsymutil + strip (see Microsoft.NETCore.Native.Unix.targets).
-if grep -q '<StripSymbols>true</StripSymbols>' "$ROOT/src/Ttfx/Ttfx.csproj"; then
+if grep -q '<StripSymbols>true</StripSymbols>' "$ROOT/src/Ttfx.Cli/Ttfx.Cli.csproj"; then
   if [ "$(uname -s)" = "Darwin" ]; then
     if ! command -v dsymutil >/dev/null 2>&1; then
       missing "dsymutil"

@@ -26,6 +26,11 @@ else
   fi
 fi
 
-dotnet publish src/Ttfx -c Release -r "$rid" -o "$ROOT/artifacts"
+if [ -n "${VERSION:-}" ]; then
+  dotnet publish src/Ttfx.Cli -c Release -r "$rid" -o "$ROOT/artifacts" \
+    -p:Version="$VERSION" -p:PackageVersion="$VERSION"
+else
+  dotnet publish src/Ttfx.Cli -c Release -r "$rid" -o "$ROOT/artifacts"
+fi
 
 echo "Published $ROOT/artifacts/ttfx ($rid)"

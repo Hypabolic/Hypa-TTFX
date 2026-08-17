@@ -1,12 +1,16 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <AssemblyName>ttfx</AssemblyName>
-    <Version>0.3.1</Version>
-    <PublishAot>true</PublishAot>
-    <StripSymbols>true</StripSymbols>
-    <OptimizationPreference>Speed</OptimizationPreference>
+    <OutputType>Library</OutputType>
+    <AssemblyName>Hypa.Ttfx</AssemblyName>
+    <RootNamespace>Ttfx</RootNamespace>
+    <IsPackable>true</IsPackable>
+    <IsAotCompatible>true</IsAotCompatible>
+    <PackageId>Hypa.Ttfx</PackageId>
+    <Description>Terminal text-effects library: 37 effects with a parity-faithful engine. Consume from any .NET 10+ app, including Native AOT.</Description>
+    <PackageTags>ttfx;terminal;text-effects;animation;aot</PackageTags>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
   <ItemGroup>

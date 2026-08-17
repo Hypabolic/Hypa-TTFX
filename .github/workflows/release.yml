@@ -1,0 +1,223 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to stamp (no v prefix), e.g. 0.3.1. Does not publish."
+        required: true
+      publish:
+        description: "Create the GitHub release and push NuGet packages"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.set.outputs.version }}
+      publish: ${{ steps.set.outputs.publish }}
+    steps:
+      - id: set
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          INPUT_VERSION: ${{ inputs.version }}
+          INPUT_PUBLISH: ${{ inputs.publish }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "push" ]; then
+            raw="${REF_NAME#v}"
+            publish=true
+          else
+            raw="$INPUT_VERSION"
+            raw="${raw#v}"
+            publish="$INPUT_PUBLISH"
+          fi
+          if [[ ! "$raw" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.-]+)?$ ]]; then
+            echo "invalid version: $raw" >&2
+            exit 1
+          fi
+          echo "version=$raw" >> "$GITHUB_OUTPUT"
+          echo "publish=$publish" >> "$GITHUB_OUTPUT"
+
+  test-macos:
+    needs: version
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Run bin/test (macOS gate)
+        run: ./bin/test
+
+  test-linux:
+    needs: version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Install Native AOT native toolchain
+        run: sudo apt-get update && sudo apt-get install -y clang zlib1g-dev binutils
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Run bin/test (Linux oracle gate)
+        run: ./bin/test
+
+  pack:
+    needs: [version, test-macos, test-linux]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Pack NuGet packages
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: ./bin/pack
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nuget
+          path: artifacts/nuget/*
+
+  native:
+    needs: [version, test-macos, test-linux]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - rid: osx-arm64
+            os: macos-latest
+          - rid: osx-x64
+            os: macos-15-intel
+          - rid: linux-x64
+            os: ubuntu-latest
+          - rid: linux-arm64
+            os: ubuntu-24.04-arm
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Install Native AOT native toolchain
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y clang zlib1g-dev binutils
+      - name: Publish ${{ matrix.rid }}
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: ./bin/build "${{ matrix.rid }}"
+      - name: Stage named binary
+        run: |
+          mkdir -p artifacts/release
+          cp artifacts/ttfx "artifacts/release/ttfx-${{ matrix.rid }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ttfx-${{ matrix.rid }}
+          path: artifacts/release/ttfx-${{ matrix.rid }}
+
+  publish:
+    needs: [version, pack, native]
+    if: needs.version.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - uses: actions/download-artifact@v4
+        with:
+          name: nuget
+          path: artifacts/nuget
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ttfx-*
+          path: artifacts/release
+          merge-multiple: true
+      - name: Checksums
+        working-directory: artifacts/release
+        run: sha256sum ttfx-* | tee SHA256SUMS
+      - name: Release notes
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          prev="$(git describe --tags --abbrev=0 "v${VERSION}^" 2>/dev/null || true)"
+          {
+            echo "hypa-ttfx ${VERSION}"
+            echo
+            echo "Native-AOT CLI binaries and NuGet packages (\`Hypa.Ttfx\`, \`Hypa.Ttfx.Tool\`)."
+            echo
+            if [ -n "$prev" ]; then
+              echo "Changes since ${prev}:"
+              echo
+              git log --pretty=format:'- %s' "${prev}..HEAD"
+              echo
+            fi
+          } > artifacts/RELEASE_NOTES.md
+      - name: GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          tag="v${VERSION}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" artifacts/release/* artifacts/nuget/* --clobber
+          else
+            gh release create "$tag" \
+              --title "hypa-ttfx ${VERSION}" \
+              --notes-file artifacts/RELEASE_NOTES.md \
+              --target "${{ github.sha }}" \
+              artifacts/release/* \
+              artifacts/nuget/*
+          fi
+      - name: NuGet login (trusted publishing)
+        id: nuget-login
+        if: ${{ secrets.NUGET_USER != '' }}
+        continue-on-error: true
+        uses: NuGet/login@v1
+        with:
+          user: ${{ secrets.NUGET_USER }}
+      - name: Push nuget.org
+        env:
+          OIDC_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
+          API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: |
+          set -euo pipefail
+          key="${OIDC_KEY:-}"
+          if [ -z "$key" ]; then
+            key="${API_KEY:-}"
+          fi
+          if [ -z "$key" ]; then
+            echo "Skipping nuget.org push. Create a Trusted Publishing policy for release.yml and set NUGET_USER, or set NUGET_API_KEY."
+            exit 0
+          fi
+          dotnet nuget push artifacts/nuget/*.nupkg \
+            --api-key "$key" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
+      - name: Push GitHub Packages
+        continue-on-error: true
+        run: |
+          dotnet nuget push artifacts/nuget/*.nupkg \
+            --api-key "${{ github.token }}" \
+            --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
+            --skip-duplicate

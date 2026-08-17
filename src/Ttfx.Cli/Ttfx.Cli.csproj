@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>ttfx</AssemblyName>
+    <RootNamespace>Ttfx</RootNamespace>
+    <PublishAot>true</PublishAot>
+    <StripSymbols>true</StripSymbols>
+    <OptimizationPreference>Speed</OptimizationPreference>
+    <IsPackable>true</IsPackable>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>ttfx</ToolCommandName>
+    <PackageId>Hypa.Ttfx.Tool</PackageId>
+    <Description>dotnet tool for the hypa-ttfx terminal text-effects CLI (37 effects). Framework-dependent; Native-AOT binaries ship on GitHub Releases.</Description>
+    <PackageTags>ttfx;terminal;text-effects;cli;dotnet-tool</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Ttfx\Ttfx.csproj" />
+  </ItemGroup>
+
+</Project>

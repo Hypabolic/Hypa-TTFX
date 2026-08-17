@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# Pack Hypa.Ttfx (library) and Hypa.Ttfx.Tool (dotnet tool) into artifacts/nuget.
+# VERSION=1.2.3 overrides Directory.Build.props.
+set -euo pipefail
+
+ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+cd "$ROOT"
+
+if [ "$#" -gt 1 ]; then
+  echo "usage: bin/pack [version]" >&2
+  exit 2
+fi
+
+if [ "$#" -eq 1 ]; then
+  VERSION="$1"
+elif [ -z "${VERSION:-}" ]; then
+  VERSION="$(dotnet msbuild src/Ttfx/Ttfx.csproj -nologo -getProperty:Version | tr -d '[:space:]')"
+fi
+
+if [ -z "$VERSION" ]; then
+  echo "bin/pack: could not determine Version" >&2
+  exit 1
+fi
+
+out="$ROOT/artifacts/nuget"
+rm -rf "$out"
+mkdir -p "$out"
+
+common=(-c Release -o "$out" -p:Version="$VERSION" -p:PackageVersion="$VERSION")
+
+dotnet pack src/Ttfx/Ttfx.csproj "${common[@]}"
+dotnet pack src/Ttfx.Cli/Ttfx.Cli.csproj "${common[@]}"
+
+python3 - "$out" "$VERSION" <<'PY'
+import sys
+import zipfile
+from pathlib import Path
+
+out = Path(sys.argv[1])
+version = sys.argv[2]
+lib = out / f"Hypa.Ttfx.{version}.nupkg"
+tool = out / f"Hypa.Ttfx.Tool.{version}.nupkg"
+snupkg = out / f"Hypa.Ttfx.{version}.snupkg"
+missing = [p.name for p in (lib, tool, snupkg) if not p.is_file()]
+if missing:
+    print("bin/pack: missing " + ", ".join(missing), file=sys.stderr)
+    sys.exit(1)
+
+with zipfile.ZipFile(lib) as z:
+    names = z.namelist()
+    if "lib/net10.0/Hypa.Ttfx.dll" not in names:
+        print("bin/pack: library nupkg missing lib/net10.0/Hypa.Ttfx.dll", file=sys.stderr)
+        sys.exit(1)
+    if any(n.startswith("lib/") and n.endswith("ttfx.dll") for n in names):
+        print("bin/pack: library nupkg must not ship the CLI assembly", file=sys.stderr)
+        sys.exit(1)
+
+with zipfile.ZipFile(tool) as z:
+    nuspec = next(n for n in z.namelist() if n.endswith(".nuspec"))
+    text = z.read(nuspec).decode("utf-8")
+    if "packagetype" not in text.lower() or "dotnettool" not in text.lower():
+        print("bin/pack: tool nupkg is not a DotnetTool package", file=sys.stderr)
+        sys.exit(1)
+
+print(f"Packed {lib.name}, {tool.name}, {snupkg.name}")
+PY

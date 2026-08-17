@@ -25,6 +25,7 @@ internal static class Program
         tests.AddRange(RunnerSemanticsTests.All());
         tests.AddRange(CallbackTests.All());
         tests.AddRange(SignalsResizeTests.All());
+        tests.AddRange(TextEffectsTests.All());
 
         foreach (TestCase test in tests)
         {
