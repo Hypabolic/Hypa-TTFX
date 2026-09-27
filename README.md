@@ -44,24 +44,19 @@ Every clip is [`hypa-logo.txt`](hypa-logo.txt) piped through that effect with `-
 
 Regenerate with `./bin/build` and `tools/render_examples.py` (Pillow + ffmpeg).
 
-## Origins
+## License
 
-hypa-ttfx began as a C# / .NET Native-AOT port of
-[ttfx](https://github.com/omacom-io/ttfx), itself derived from
-[TerminalTextEffects](https://github.com/ChrisBuilds/terminaltexteffects)
-by [ChrisBuilds](https://github.com/ChrisBuilds). It is now a standalone
-package and continues to diverge from those sources.
-
-Legal attribution is in [LICENSE](LICENSE) and [NOTICE](NOTICE).
+MIT. Attribution for the work this package derives from is in
+[LICENSE](LICENSE) and [NOTICE](NOTICE).
 
 ## Deliberate divergences
 
 | Topic | Behavior here | Why |
 |---|---|---|
-| Random number generator | xoshiro256++ (same as ttfx) | Inherited from ttfx; `--seed` matches ttfx and this port, not Python TTE's Mersenne Twister |
+| Random number generator | xoshiro256++ | `--seed` sequences are not Python TTE's Mersenne Twister |
 | Broken-pipe exit status | 0 | Upstream Python swallows `EPIPE`; we match that contract |
-| SIGTERM exit status | Matches ttfx (signal 15 via `WIFSIGNALED`) | Not a divergence |
-| Shell completions | Hand-written templates | Zero NuGet packages — no `clap_complete`; text differs from ttfx's generated scripts |
+| SIGTERM exit status | Signal 15 (via `WIFSIGNALED`) | Not a divergence |
+| Shell completions | Hand-written templates | Zero NuGet packages, so no completion generator |
 | Plugin effects | Not supported | No Python interpreter to load them |
 | Cell width | One codepoint = one cell (`Rune`) | Faithfully reproduces upstream; no `wcwidth` |
 | Byte-exact parity | Verified on tested RIDs only | See **Fidelity** below |
@@ -69,7 +64,7 @@ Legal attribution is in [LICENSE](LICENSE) and [NOTICE](NOTICE).
 ## Fidelity
 
 This is a *parity port*: given the same input, config, and seed, hypa-ttfx aims for
-**byte-identical frame output** to the pinned ttfx binary (`REFERENCE.md`).
+**byte-identical frame output** to the pinned reference binary (`REFERENCE.md`).
 
 **Verified on this project's CI / local testing:**
 
@@ -180,8 +175,8 @@ ttfx --print-completion bash|zsh
 ```
 
 Terminal options go before the effect name; effect options after it. Names and defaults
-match ttfx / TTE.
+match TerminalTextEffects.
 
 ## Reference pins
 
-See [REFERENCE.md](REFERENCE.md) for the pinned ttfx and upstream TTE commits.
+See [REFERENCE.md](REFERENCE.md) for the pinned reference commits.
