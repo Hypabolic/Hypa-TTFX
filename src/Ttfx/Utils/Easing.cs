@@ -6,13 +6,12 @@ namespace Ttfx.Utils;
 /// <summary>
 /// A named easing or a custom cubic bezier (make_easing). Copyable so Paths and
 /// Scenes can carry it by value.
-/// Transcribed from <c>utils/easing.rs</c>.
 /// </summary>
 /// <remarks>
 /// Transcription rule: Python <c>x ** n</c> routes through C <c>pow()</c> even for int
 /// exponents, so every <c>**</c> here is <c>Math.Pow</c>, never <c>x * x</c> or
 /// <c>Math.Sqrt</c> for <c>powf(0.5)</c> — they can differ by ULPs and coordinate
-/// quantization sits downstream. Circ uses Rust <c>.sqrt()</c>;
+/// quantization sits downstream. Circ uses a true square root;
 /// that one IS <c>Math.Sqrt</c>.
 /// </remarks>
 public readonly record struct Easing(EasingKind Kind, double X1 = 0, double Y1 = 0, double X2 = 0, double Y2 = 0)
@@ -72,7 +71,7 @@ public readonly record struct Easing(EasingKind Kind, double X1 = 0, double Y1 =
             case EasingKind.InQuad:
                 return Math.Pow(p, 2.0);
             case EasingKind.OutQuad:
-                // Rust writes this as a multiply, not powf.
+                // Written as a multiply, not a power.
                 return 1.0 - (1.0 - p) * (1.0 - p);
             case EasingKind.InOutQuad:
                 if (p < 0.5)
@@ -473,7 +472,7 @@ public sealed class SequenceEaser<T>
             return new SequenceStep<T>(Array.Empty<T>(), Array.Empty<T>());
         }
 
-        // int() truncation, faithfully — as i64 as usize (eased_value)
+        // int() truncation, faithfully — truncate then wrap (eased_value)
         nuint length = PyCompat.TruncToUsize(easedValue * seqLen);
         nuint previousLength = PyCompat.TruncToUsize(previousEased * seqLen);
         int lengthI = ToIndex(length);

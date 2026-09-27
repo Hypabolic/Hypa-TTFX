@@ -6,7 +6,7 @@ using Ttfx.Utils;
 
 namespace Ttfx.Effects;
 
-/// <summary>thunderstorm, ported from effects/effect_thunderstorm.py. Transcribed from <c>effects/thunderstorm.rs</c>.</summary>
+/// <summary>thunderstorm, ported from effects/effect_thunderstorm.py.</summary>
 public sealed class ThunderstormConfig
 {
     public Color LightningColor { get; set; } = Color.FromHex("68A3E8");
@@ -443,7 +443,7 @@ public sealed class Thunderstorm : IEffect
                     break;
                 }
 
-                // thunderstorm.rs:513 — remove(0) FIFO.
+                // FIFO from the front.
                 CharId nextStrikeChar = _pendingStrikeChars[0];
                 _pendingStrikeChars.RemoveAt(0);
                 _activeStrikeChars.Add(nextStrikeChar);

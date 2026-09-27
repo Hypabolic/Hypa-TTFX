@@ -11,7 +11,6 @@ namespace Ttfx.Utils;
 /// set; BreadthFirst iterates it. Our canonical order is ascending
 /// character_id — links are kept sorted-by-id on insert, and the parity shim
 /// patches the Python side to <c>sorted(links, key=character_id)</c>.
-/// Transcribed from <c>utils/spanning_tree.rs</c>.
 /// </summary>
 public static class SpanningTree
 {
@@ -398,7 +397,7 @@ public sealed class BreadthFirst
             _frontier.RemoveAt(0);
             List<CharId> links = world.Terminal.Arena[(int)position.Value].Links;
             var positionNewEdges = new List<CharId>();
-            // Length captured once: links snapshot for this node (spanning_tree.rs:318).
+            // Length captured once: links snapshot for this node.
             int linkCount = links.Count;
             for (int i = 0; i < linkCount; i++)
             {

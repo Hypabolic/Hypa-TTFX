@@ -11,7 +11,6 @@ namespace Ttfx.Engine;
 /// execute inline at the exact upstream emission points, reentrantly.
 /// Effect callbacks are (id, payload) records — never
 /// closures that capture loop variables.
-/// Transcribed from <c>engine/events.rs</c>.
 /// </summary>
 public enum Event
 {
@@ -327,8 +326,8 @@ public sealed class EffectCallback : IEquatable<EffectCallback>
 }
 
 /// <summary>
-/// A registered action. Targets stay string ids, re-resolved at dispatch
-/// (<c>ctx.rs:252-262</c>). Equals/GetHashCode cover the whole value including
+/// A registered action. Targets stay string ids, re-resolved at dispatch.
+/// Equals/GetHashCode cover the whole value including
 /// array contents (not reference) so duplicate registration is structural.
 /// </summary>
 public abstract class EventAction : IEquatable<EventAction>
@@ -471,7 +470,7 @@ public sealed class EventHandler
     public void Push(Event ev, CallerKey caller, EventAction action)
     {
         RegisteredEvent? existing = null;
-        // Length captured once: push does not emit (events.rs:170).
+        // Length captured once: push does not emit.
         int count = _registeredEvents.Count;
         for (int i = 0; i < count; i++)
         {
@@ -485,7 +484,7 @@ public sealed class EventHandler
 
         if (existing is not null)
         {
-            // Length captured once: contains is a scan, no emission (events.rs:174).
+            // Length captured once: contains is a scan, no emission.
             int actionCount = existing.Actions.Count;
             for (int i = 0; i < actionCount; i++)
             {
@@ -519,7 +518,7 @@ public sealed class EventHandler
             return null;
         }
 
-        // Length captured once: lookup does not emit (events.rs:204-212).
+        // Length captured once: lookup does not emit.
         int count = _registeredEvents.Count;
         for (int i = 0; i < count; i++)
         {

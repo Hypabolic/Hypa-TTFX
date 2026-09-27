@@ -5,7 +5,7 @@ using Ttfx.Utils;
 
 namespace Ttfx.Effects;
 
-/// <summary>smoke, ported from effects/effect_smoke.py. Transcribed from <c>effects/smoke.rs</c>.</summary>
+/// <summary>smoke, ported from effects/effect_smoke.py.</summary>
 public sealed class SmokeConfig
 {
     public Color StartingColor { get; set; } = Color.FromHex("7A7A7A");
@@ -20,11 +20,11 @@ public sealed class SmokeConfig
 public sealed class Smoke : IEffect
 {
     private readonly SmokeConfig _config;
-    // HashMap in the reference: lookup only, iteration order is not contractual.
+    // Lookup only; iteration order is not contractual.
     private readonly Dictionary<CharId, ColorPair> _characterFinalColorMap;
     /// <summary>
-    /// Option so next_frame can move it out of self while stepping needs ctx
-    /// and event dispatch needs &amp;mut self.
+    /// Nullable so next_frame can take it out while stepping and event
+    /// dispatch go through the world and this effect.
     /// </summary>
     private BreadthFirst? _fillAlg;
 

@@ -5,7 +5,7 @@ using Ttfx.Utils;
 
 namespace Ttfx.Effects;
 
-/// <summary>waves, ported from effects/effect_waves.py. Transcribed from <c>effects/waves.rs</c>.</summary>
+/// <summary>waves, ported from effects/effect_waves.py.</summary>
 public sealed class WavesConfig
 {
     public List<string> WaveSymbols { get; set; } = new List<string>();
@@ -203,7 +203,7 @@ public sealed class Waves : IEffect
         {
             if (_pendingColumns.Count > 0)
             {
-                // waves.rs:271 — pending_columns.remove(0)
+                // take the first pending column
                 List<CharId> nextColumn = _pendingColumns[0];
                 _pendingColumns.RemoveAt(0);
                 foreach (CharId id in nextColumn)

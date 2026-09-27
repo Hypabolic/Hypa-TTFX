@@ -7,18 +7,18 @@ using Ttfx.Utils;
 namespace Ttfx.Cli;
 
 /// <summary>
-/// Rust <c>str::parse</c> + argutils messages. Not <c>long.Parse</c> /
-/// <c>double.Parse</c> (those accept surrounding whitespace; Rust rejects).
+/// Strict number grammar + argutils messages. Not <c>long.Parse</c> /
+/// <c>double.Parse</c> (those accept surrounding whitespace; this grammar rejects it).
 /// </summary>
 public static class ValueParsers
 {
-    private const ulong RustNanBits = 0x7FF8000000000000UL;
-    private const ulong RustNegNanBits = 0xFFF8000000000000UL;
+    private const ulong CanonicalNanBits = 0x7FF8000000000000UL;
+    private const ulong CanonicalNegNanBits = 0xFFF8000000000000UL;
 
     public static bool TryParseI64(string s, out long value)
     {
         value = 0;
-        if (!IsRustSignedIntGrammar(s))
+        if (!IsStrictSignedIntGrammar(s))
         {
             return false;
         }
@@ -29,7 +29,7 @@ public static class ValueParsers
     public static bool TryParseU64(string s, out ulong value)
     {
         value = 0;
-        if (!IsRustUnsignedIntGrammar(s))
+        if (!IsStrictUnsignedIntGrammar(s))
         {
             return false;
         }
@@ -80,11 +80,11 @@ public static class ValueParsers
 
         if (body.Equals("nan", StringComparison.OrdinalIgnoreCase))
         {
-            value = BitConverter.UInt64BitsToDouble(negative ? RustNegNanBits : RustNanBits);
+            value = BitConverter.UInt64BitsToDouble(negative ? CanonicalNegNanBits : CanonicalNanBits);
             return true;
         }
 
-        if (!IsRustFloatGrammar(s))
+        if (!IsStrictFloatGrammar(s))
         {
             return false;
         }
@@ -188,10 +188,10 @@ public static class ValueParsers
         throw new UsageError($"{FormatF64(v)} is not a valid value. Argument must be a float > 0.");
     }
 
-    /// <summary>common.rs parse_positive_float: float &gt; 0, boxed for OptionSpec.</summary>
+    /// <summary>parse_positive_float: float &gt; 0, boxed for OptionSpec.</summary>
     public static object ParsePositiveFloat(string s) => PositiveFloat(s);
 
-    /// <summary>common.rs parse_positive_int_range: "1-10".</summary>
+    /// <summary>parse_positive_int_range: "1-10".</summary>
     public static object ParsePositiveIntRange(string s)
     {
         int dash = s.IndexOf('-', StringComparison.Ordinal);
@@ -215,7 +215,7 @@ public static class ValueParsers
         throw new UsageError($"invalid range: '{s}'");
     }
 
-    /// <summary>common.rs parse_positive_float_range: "0.25-0.5".</summary>
+    /// <summary>parse_positive_float_range: "0.25-0.5".</summary>
     public static object ParsePositiveFloatRange(string s)
     {
         int dash = s.IndexOf('-', StringComparison.Ordinal);
@@ -239,10 +239,10 @@ public static class ValueParsers
         throw new UsageError($"invalid range: '{s}'");
     }
 
-    /// <summary>common.rs parse_non_negative_ratio: 0 &lt;= n &lt;= 1, boxed for OptionSpec.</summary>
+    /// <summary>parse_non_negative_ratio: 0 &lt;= n &lt;= 1, boxed for OptionSpec.</summary>
     public static object ParseNonNegativeRatio(string s) => NonNegativeRatio(s);
 
-    /// <summary>common.rs parse_positive_ratio: 0 &lt; n &lt;= 1, boxed for OptionSpec.</summary>
+    /// <summary>parse_positive_ratio: 0 &lt; n &lt;= 1, boxed for OptionSpec.</summary>
     public static object ParsePositiveRatio(string s) => PositiveRatio(s);
 
     public static double NonNegativeFloat(string s)
@@ -256,7 +256,7 @@ public static class ValueParsers
         throw new UsageError($"{FormatF64(v)} is not a valid value. Argument must be a float >= 0.");
     }
 
-    /// <summary>common.rs parse_non_negative_float: float &gt;= 0, boxed for OptionSpec.</summary>
+    /// <summary>parse_non_negative_float: float &gt;= 0, boxed for OptionSpec.</summary>
     public static object ParseNonNegativeFloat(string s) => NonNegativeFloat(s);
 
     public static double NonNegativeRatio(string s)
@@ -285,7 +285,7 @@ public static class ValueParsers
 
     public static Color ColorArg(string s)
     {
-        // Rust s.len() is bytes. Color tokens are ASCII-safe by construction.
+        // Length in UTF-8 bytes. Color tokens are ASCII-safe by construction.
         int byteLen = Encoding.UTF8.GetByteCount(s);
         if (byteLen <= 3)
         {
@@ -337,7 +337,7 @@ public static class ValueParsers
 
     public static string Symbol(string s)
     {
-        // common.rs:116 — s.chars().count() == 1 (runes, not UTF-16 length)
+        // exactly one rune (not UTF-16 length)
         if (Unicode.RuneCount(s) != 1)
         {
             throw new UsageError($"invalid symbol: '{s}' argument must be a single character");
@@ -375,10 +375,10 @@ public static class ValueParsers
 
     public static object ParseI64Object(string s) => ParseI64(s);
 
-    /// <summary>common.rs parse_positive_int: alias of parse_gradient_steps.</summary>
+    /// <summary>parse_positive_int: alias of parse_gradient_steps.</summary>
     public static object ParseCommonPositiveInt(string s) => ParseGradientSteps(s);
 
-    /// <summary>common.rs parse_gradient_steps: int &gt; 0.</summary>
+    /// <summary>parse_gradient_steps: int &gt; 0.</summary>
     public static object ParseGradientSteps(string s)
     {
         long v = ParseI64(s);
@@ -390,7 +390,7 @@ public static class ValueParsers
         throw new UsageError($"{v} is not a valid value. Argument must be an int > 0.");
     }
 
-    /// <summary>common.rs parse_non_negative_int: int &gt;= 0.</summary>
+    /// <summary>parse_non_negative_int: int &gt;= 0.</summary>
     public static object ParseCommonNonNegativeInt(string s)
     {
         long v = ParseI64(s);
@@ -402,7 +402,7 @@ public static class ValueParsers
         throw new UsageError($"{v} is not a valid value. Argument must be an int >= 0.");
     }
 
-    /// <summary>common.rs parse_gradient_direction.</summary>
+    /// <summary>parse_gradient_direction.</summary>
     public static object ParseGradientDirection(string s)
     {
         return s switch
@@ -415,7 +415,7 @@ public static class ValueParsers
         };
     }
 
-    /// <summary>waves.rs parse_wave_direction — subset of CharacterGroup.</summary>
+    /// <summary>parse_wave_direction — subset of CharacterGroup.</summary>
     public static object ParseWaveDirection(string s)
     {
         return s switch
@@ -430,7 +430,7 @@ public static class ValueParsers
         };
     }
 
-    /// <summary>common.rs parse_character_group.</summary>
+    /// <summary>parse_character_group.</summary>
     public static object ParseCharacterGroup(string s)
     {
         return s switch
@@ -461,7 +461,7 @@ public static class ValueParsers
         return true;
     }
 
-    private static bool IsRustSignedIntGrammar(string s)
+    private static bool IsStrictSignedIntGrammar(string s)
     {
         if (s.Length == 0)
         {
@@ -490,7 +490,7 @@ public static class ValueParsers
         return true;
     }
 
-    private static bool IsRustUnsignedIntGrammar(string s)
+    private static bool IsStrictUnsignedIntGrammar(string s)
     {
         if (s.Length == 0)
         {
@@ -519,7 +519,7 @@ public static class ValueParsers
         return true;
     }
 
-    private static bool IsRustFloatGrammar(string s)
+    private static bool IsStrictFloatGrammar(string s)
     {
         int i = 0;
         if (s.Length > 0 && (s[0] == '+' || s[0] == '-'))

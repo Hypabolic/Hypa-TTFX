@@ -63,7 +63,7 @@ public static partial class PosixTerminal
     public static bool IsStdoutTty() => IsAtty(1) == 1;
 
     /// <summary>
-    /// terminal_size crate: stdout, then stderr, then stdin; first that is a
+    /// Probe order: stdout, then stderr, then stdin; first that is a
     /// tty <em>and</em> reports positive rows and columns.
     /// </summary>
     public static (long Width, long Height)? QueryTtySize()

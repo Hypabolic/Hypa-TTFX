@@ -8,8 +8,7 @@ namespace Ttfx.Tests;
 
 /// <summary>
 /// Grouped character queries vs the scan-based reference, including the
-/// destructive alternate-pop interleave (terminal.rs:409).
-/// Transcribed from <c>tests/terminal_grouping.rs</c>.
+/// destructive alternate-pop interleave.
 /// </summary>
 internal static class TerminalGroupingTests
 {

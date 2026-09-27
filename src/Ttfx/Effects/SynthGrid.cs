@@ -6,7 +6,7 @@ using Ttfx.Utils;
 
 namespace Ttfx.Effects;
 
-/// <summary>synthgrid, ported from effects/effect_synthgrid.py. Transcribed from <c>effects/synthgrid.rs</c>.</summary>
+/// <summary>synthgrid, ported from effects/effect_synthgrid.py.</summary>
 public sealed class SynthGridConfig
 {
     public List<Color> GridGradientStops { get; set; } = new List<Color>();
@@ -225,7 +225,7 @@ public sealed class SynthGrid : IEffect
         }
     }
 
-    /// <summary>Rust <c>bottom..top</c> — inclusive start, exclusive end.</summary>
+    /// <summary>Half-open range: inclusive start, exclusive end.</summary>
     private static IEnumerable<Coord> RangeExclusiveEnd(long start, long endExclusive, Func<long, Coord> map)
     {
         for (long i = start; i < endExclusive; i++)
@@ -399,7 +399,7 @@ public sealed class SynthGrid : IEffect
                 ColorPair finalColors = _characterFinalColorMap.GetValueOrDefault(character, new ColorPair());
                 scene.AddFrame(inputSymbol, 1, new VisualParams { Colors = finalColors });
                 world.ActivateScene(this, character, dissolveScn);
-                // synthgrid.rs:454-462 — payload is group_number at registration, not a loop capture.
+                // payload is group_number at registration, not a loop capture.
                 world.RegisterEvent(
                     character,
                     Event.SceneComplete,

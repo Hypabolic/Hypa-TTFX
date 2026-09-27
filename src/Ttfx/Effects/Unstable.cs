@@ -6,7 +6,7 @@ using Ttfx.Utils;
 
 namespace Ttfx.Effects;
 
-/// <summary>unstable, ported from effects/effect_unstable.py. Transcribed from <c>effects/unstable.rs</c>.</summary>
+/// <summary>unstable, ported from effects/effect_unstable.py.</summary>
 public sealed class UnstableConfig
 {
     public Color UnstableColor { get; set; } = Color.FromHex("ff9200");
@@ -149,7 +149,7 @@ public sealed class Unstable : IEffect
                     break;
             }
 
-            // unstable.rs:167 — RNG-indexed remove
+            // RNG-indexed remove
             int removeIndex = (int)world.Rng.Randint(0, characterCoords.Count - 1);
             Coord jumbledCoord = characterCoords[removeIndex];
             characterCoords.RemoveAt(removeIndex);

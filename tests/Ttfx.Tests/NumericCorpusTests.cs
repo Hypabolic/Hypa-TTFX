@@ -28,7 +28,7 @@ internal static class NumericCorpusTests
             string[] cols = raw.Split('\t');
             if (cols[0] == "rust")
             {
-                CheckRust(lineNo, cols);
+                CheckStrictParse(lineNo, cols);
             }
             else if (cols[0] == "cli")
             {
@@ -41,12 +41,12 @@ internal static class NumericCorpusTests
         }
     }
 
-    private static void CheckRust(int lineNo, string[] cols)
+    private static void CheckStrictParse(int lineNo, string[] cols)
     {
         string kind = cols[1];
         string token = DecodeHex(cols[2]);
         bool accept = cols[3] == "accept";
-        string name = $"rust {kind} L{lineNo} {FormatToken(token)}";
+        string name = $"parse {kind} L{lineNo} {FormatToken(token)}";
 
         if (kind == "i64")
         {

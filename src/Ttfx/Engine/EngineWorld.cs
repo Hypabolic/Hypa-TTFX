@@ -9,7 +9,6 @@ namespace Ttfx.Engine;
 /// Effect-side hook for CALLBACK actions. The effect struct and the EngineWorld
 /// are disjoint ownership trees, so the callback may freely recurse into
 /// engine calls with the provided world.
-/// Transcribed from <c>engine/ctx.rs</c> EffectHooks.
 /// </summary>
 public interface IEffectHooks
 {
@@ -20,7 +19,6 @@ public interface IEffectHooks
 /// One effect: Build() once (upstream iterator __init__/build), then
 /// NextFrame() until null (upstream __next__/StopIteration). Every effect
 /// also implements IEffectHooks for its registered callbacks.
-/// Transcribed from <c>engine/effect.rs</c> Effect.
 /// </summary>
 public interface IEffect : IEffectHooks
 {
@@ -48,7 +46,6 @@ public sealed class NoopHooks : IEffectHooks
 /// that observable ordering, all stepping logic lives here:
 /// state is re-fetched by id after every emission point, and segment walks are
 /// index-based so reentrant list mutation behaves like Python list iteration.
-/// Transcribed from <c>engine/ctx.rs</c>.
 /// </summary>
 public sealed class EngineWorld
 {
@@ -128,7 +125,7 @@ public sealed class EngineWorld
         }
 
         int actionIndex = 0;
-        // Explicit loop re-reading actions.Count each pass (ctx.rs:169-204):
+        // Explicit loop re-reading actions.Count each pass:
         // a reentrant callback may append more actions to this entry.
         while (true)
         {
@@ -252,7 +249,7 @@ public sealed class EngineWorld
         path.CurrentStep = 0;
         path.HoldTimeRemaining = path.HoldTime;
         path.MaxSteps = PyCompat.RoundHalfEven(path.TotalDistance / path.Speed);
-        // Length captured once: flag reset does not emit (ctx.rs:284-287).
+        // Length captured once: flag reset does not emit.
         int segmentCount = path.Segments.Count;
         for (int i = 0; i < segmentCount; i++)
         {
@@ -274,7 +271,7 @@ public sealed class EngineWorld
 
     /// <summary>
     /// Path.step on the given path of <paramref name="id"/>. Index-based segment walk with
-    /// re-borrow per access so reentrant mutation behaves like Python.
+    /// re-fetch per access so reentrant mutation behaves like Python.
     ///
     /// The path's slot is resolved once and re-resolved after every emission,
     /// since only a reentrant action can move or drop it.
@@ -310,7 +307,7 @@ public sealed class EngineWorld
 
         int? activeSegmentIndex = null;
         int i = 0;
-        // Explicit loop re-reading segments.Count each pass (ctx.rs:343-389):
+        // Explicit loop re-reading segments.Count each pass:
         // a reentrant event may have replaced the segment list.
         while (true)
         {
@@ -513,7 +510,7 @@ public sealed class EngineWorld
             return;
         }
 
-        // Length captured once: chain_paths only registers, no emission (ctx.rs:487).
+        // Length captured once: chain_paths only registers, no emission.
         int count = paths.Count;
         for (int i = 1; i < count; i++)
         {
@@ -771,18 +768,25 @@ public sealed class EngineWorld
     /// </summary>
     public void Update(IEffectHooks hooks)
     {
-        // Snapshot taken before the walk (ctx.rs:682-687).
-        CharId[] snapshot = ActiveCharacters.Snapshot();
-        // Length captured once: snapshot walk (ctx.rs:685).
-        int count = snapshot.Length;
+        // Snapshot taken before the walk, into a buffer
+        // reused across frames. A reentrant Update from a callback takes a
+        // fresh one rather than overwrite the walk in progress.
+        List<CharId> snapshot = _updateScratch ?? new List<CharId>();
+        _updateScratch = null;
+        ActiveCharacters.SnapshotInto(snapshot);
+        // Length captured once: snapshot walk.
+        int count = snapshot.Count;
         for (int i = 0; i < count; i++)
         {
             Tick(hooks, snapshot[i]);
         }
 
-        List<EffectCharacter> arena = Terminal.Arena;
-        ActiveCharacters.Retain(id => arena[(int)id.Value].IsActive());
+        snapshot.Clear();
+        _updateScratch = snapshot;
+        ActiveCharacters.RetainActive(Terminal.Arena);
     }
+
+    private List<CharId>? _updateScratch = new List<CharId>();
 
     /// <summary>
     /// BaseEffectIterator.frame: enforce framerate (real clock only), then the
@@ -796,6 +800,31 @@ public sealed class EngineWorld
         }
 
         Clock.AdvanceFrame();
-        return Encoding.UTF8.GetString(Terminal.GetFormattedOutputString().Span);
+        ReadOnlyMemory<byte> frame = Terminal.GetFormattedOutputString();
+        return FrameTextDeferred ? RenderedFrame : Encoding.UTF8.GetString(frame.Span);
+    }
+
+    /// <summary>
+    /// Returned by <see cref="Frame"/> in place of the frame text while
+    /// <see cref="FrameTextDeferred"/> is set: the frame is in
+    /// <see cref="Terminal.LastFrame"/>. Compared by reference only.
+    /// </summary>
+    internal static readonly string RenderedFrame = new string('\0', 1);
+
+    /// <summary>
+    /// Set by runners that write frames as bytes, so <see cref="Frame"/> skips
+    /// decoding each frame into a string only to encode it again.
+    /// </summary>
+    internal bool FrameTextDeferred { get; set; }
+
+    /// <summary>
+    /// The bytes of a frame an effect returned: the terminal's buffer for
+    /// <see cref="RenderedFrame"/>, else the effect's own text encoded.
+    /// </summary>
+    internal ReadOnlyMemory<byte> FrameBytes(string frame)
+    {
+        return ReferenceEquals(frame, RenderedFrame)
+            ? Terminal.LastFrame
+            : Encoding.UTF8.GetBytes(frame);
     }
 }

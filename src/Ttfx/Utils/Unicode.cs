@@ -6,13 +6,13 @@ using Ttfx.Engine;
 namespace Ttfx.Utils;
 
 /// <summary>
-/// Unicode helpers matching Rust <c>char</c> / <c>str::chars()</c> semantics.
+/// Unicode helpers over Unicode scalar values.
 /// One scalar value is one cell; never iterate UTF-16 <c>char</c>.
 /// </summary>
 public static class Unicode
 {
     /// <summary>
-    /// Rust <c>str::chars().count()</c>: number of Unicode scalar values.
+    /// Number of Unicode scalar values.
     /// Not <c>string.Length</c> (UTF-16 code units).
     /// </summary>
     public static int RuneCount(string s)
@@ -27,8 +27,8 @@ public static class Unicode
     }
 
     /// <summary>
-    /// binarypath.rs:159 — <c>format!("{code_point:08b}")</c> on
-    /// <c>symbol.chars().next() as u32</c>. Uses the full scalar
+    /// Binary digits, zero-padded to at least 8, of a symbol's first scalar
+    /// value. Uses the full scalar
     /// (<c>Rune.Value</c>), not a UTF-16 high surrogate.
     /// </summary>
     public static string CodepointToBinary(Rune rune)
@@ -37,8 +37,8 @@ public static class Unicode
     }
 
     /// <summary>
-    /// binarypath.rs:159 wrapper: first scalar of <paramref name="symbol"/>,
-    /// then <c>{:08b}</c>. Empty symbol is an invariant failure.
+    /// First scalar of <paramref name="symbol"/>, then zero-padded binary.
+    /// Empty symbol is an invariant failure.
     /// </summary>
     public static string SymbolToBinary(string symbol)
     {
@@ -52,10 +52,10 @@ public static class Unicode
     }
 
     /// <summary>
-    /// Rust <c>char::to_digit</c>. ASCII <c>0-9</c> / <c>a-z</c> / <c>A-Z</c>
+    /// Digit value in a radix. ASCII <c>0-9</c> / <c>a-z</c> / <c>A-Z</c>
     /// only; Unicode digit forms (e.g. ３) return null. Not
     /// <c>char.GetNumericValue</c>. Radix outside 2..=36 is an invariant
-    /// failure (Rust <c>assert!</c>).
+    /// failure.
     /// </summary>
     public static uint? ToDigit(Rune c, uint radix)
     {
@@ -91,11 +91,11 @@ public static class Unicode
         return null;
     }
 
-    /// <summary>Rust <c>c.to_digit(10)</c> — ASCII digits only.</summary>
+    /// <summary>Decimal digit value — ASCII digits only.</summary>
     public static uint? ToDigit10(Rune c) => ToDigit(c, 10);
 
     /// <summary>
-    /// swarm.rs:113 — <c>s.chars().next().and_then(|c| c.to_digit(10))</c>.
+    /// Decimal digit value of the first scalar, if any.
     /// </summary>
     public static long FirstCharDigit(string s)
     {

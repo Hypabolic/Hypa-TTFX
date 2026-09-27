@@ -16,7 +16,7 @@ public enum BlackholePhase
     Complete,
 }
 
-/// <summary>blackhole, ported from effects/effect_blackhole.py. Transcribed from <c>effects/blackhole.rs</c>.</summary>
+/// <summary>blackhole, ported from effects/effect_blackhole.py.</summary>
 public sealed class BlackholeConfig
 {
     public Color BlackholeColor { get; set; } = Color.FromHex("ffffff");
@@ -32,7 +32,7 @@ public sealed class Blackhole : IEffect
     private readonly List<CharId> _blackholeChars;
     private readonly List<CharId> _awaitingConsumptionChars;
     private long _blackholeRadius;
-    // HashMap in the reference: lookup only, iteration order is not contractual.
+    // Lookup only; iteration order is not contractual.
     private readonly Dictionary<CharId, Color> _characterFinalColorMap;
     private long _formationDelay;
     private long _fDelay;
@@ -86,7 +86,7 @@ public sealed class Blackhole : IEffect
         var availableChars = new List<CharId>(world.Terminal.InputCharacters);
         while (_blackholeChars.Count < _blackholeRadius * 3 && availableChars.Count > 0)
         {
-            // blackhole.rs:103-104 — randrange(0, len) then RNG-indexed remove
+            // randrange(0, len) then RNG-indexed remove
             int index = (int)world.Rng.Randrange(0, availableChars.Count);
             _blackholeChars.Add(availableChars[index]);
             availableChars.RemoveAt(index);
@@ -249,7 +249,7 @@ public sealed class Blackhole : IEffect
         Coord canvasCenter = world.Terminal.Canvas.Center;
         foreach (CharId id in new List<CharId>(_blackholeChars))
         {
-            // blackhole.rs:287 — FIFO remove(0)
+            // FIFO: take from the front
             Coord nextPos = blackHoleRingPositions[0];
             blackHoleRingPositions.RemoveAt(0);
             string expandPath;
@@ -465,7 +465,7 @@ public sealed class Blackhole : IEffect
         }
 
         PrepareBlackhole(world);
-        // blackhole.rs:556 — floor_div, not C# /
+        // floor_div, not C# /
         _formationDelay = Math.Max(PyCompat.FloorDiv(100, _blackholeChars.Count), 6);
         _fDelay = _formationDelay;
         _phase = BlackholePhase.Forming;
@@ -483,7 +483,7 @@ public sealed class Blackhole : IEffect
                     {
                         if (_fDelay == 0)
                         {
-                            // blackhole.rs:569 — FIFO remove(0)
+                            // FIFO: take from the front
                             CharId nextChar = _awaitingBlackholeChars[0];
                             _awaitingBlackholeChars.RemoveAt(0);
                             world.ActivatePath(this, nextChar, "blackhole");

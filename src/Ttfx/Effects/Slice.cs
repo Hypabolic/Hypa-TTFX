@@ -5,7 +5,7 @@ using Ttfx.Utils;
 
 namespace Ttfx.Effects;
 
-/// <summary>slice, ported from effects/effect_slice.py. Transcribed from <c>effects/slice.rs</c>.</summary>
+/// <summary>slice, ported from effects/effect_slice.py.</summary>
 public sealed class SliceConfig
 {
     public string SliceDirection { get; set; } = "vertical";
@@ -19,7 +19,7 @@ public sealed class SliceConfig
 public sealed class Slice : IEffect
 {
     private readonly SliceConfig _config;
-    // HashMap in the reference: lookup only, iteration order is not contractual.
+    // Lookup only; iteration order is not contractual.
     private readonly Dictionary<CharId, ColorPair> _characterFinalColorMap;
 
     public Slice(SliceConfig config)
@@ -28,7 +28,7 @@ public sealed class Slice : IEffect
         _characterFinalColorMap = new Dictionary<CharId, ColorPair>();
     }
 
-    /// <summary>slice.rs slice_direction value_parser.</summary>
+    /// <summary>slice_direction value_parser.</summary>
     public static object ParseSliceDirection(string s)
     {
         return s switch
@@ -276,7 +276,7 @@ public sealed class Slice : IEffect
             {
                 if (left.Count > 0)
                 {
-                    // slice.rs:230 — remove(0) FIFO drain
+                    // FIFO drain from the front
                     List<CharId> leftGroup = left[0];
                     left.RemoveAt(0);
                     Coord originCoord = Coord.New(
@@ -292,7 +292,7 @@ public sealed class Slice : IEffect
 
                 if (right.Count > 0)
                 {
-                    // slice.rs:241 — remove(0) FIFO drain
+                    // FIFO drain from the front
                     List<CharId> rightGroup = right[0];
                     right.RemoveAt(0);
                     Coord originCoord = Coord.New(

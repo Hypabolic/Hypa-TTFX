@@ -6,7 +6,7 @@ using Ttfx.Utils;
 
 namespace Ttfx.Effects;
 
-/// <summary>overflow, ported from effects/effect_overflow.py. Transcribed from <c>effects/overflow.rs</c>.</summary>
+/// <summary>overflow, ported from effects/effect_overflow.py.</summary>
 public sealed class OverflowConfig
 {
     public List<Color> OverflowGradientStops { get; set; } = new List<Color>();
@@ -71,7 +71,7 @@ internal sealed class OverflowRow
 public sealed class Overflow : IEffect
 {
     private readonly OverflowConfig _config;
-    // overflow.rs:95 — VecDeque push_back / pop_front
+    // Deque: append to the back, take from the front
     private readonly Ttfx.Utils.Queue<OverflowRow> _pendingRows;
     private readonly List<OverflowRow> _activeRows;
     private readonly Dictionary<CharId, Color> _characterFinalColorMap;

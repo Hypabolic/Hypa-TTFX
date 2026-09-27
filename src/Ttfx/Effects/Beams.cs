@@ -30,7 +30,7 @@ public sealed class BeamsGroup
     public double NextCharacterCounter { get; set; }
 }
 
-/// <summary>beams, ported from effects/effect_beams.py. Transcribed from <c>effects/beams.rs</c>.</summary>
+/// <summary>beams, ported from effects/effect_beams.py.</summary>
 public sealed class BeamsConfig
 {
     public List<string> BeamRowSymbols { get; set; } = new List<string>();
@@ -53,7 +53,7 @@ public sealed class Beams : IEffect
     private readonly BeamsConfig _config;
     private readonly List<BeamsGroup> _pendingGroups;
     private readonly List<BeamsGroup> _activeGroups;
-    // HashMap in the reference: lookup only, iteration order is not contractual.
+    // Lookup only; iteration order is not contractual.
     private readonly Dictionary<CharId, ColorPair> _characterFinalColorMap;
     private List<List<CharId>> _finalWipeGroups;
     private long _delay;
@@ -110,13 +110,13 @@ public sealed class Beams : IEffect
         switch (direction)
         {
             case BeamsDirection.Row:
-                // beams.rs:134 — sort_by_key is stable; List.Sort is not
+                // stable sort required; List.Sort is not stable
                 sorted = characters
                     .OrderBy(id => world.Terminal.Arena[(int)id.Value].InputCoord.Column)
                     .ToList();
                 break;
             case BeamsDirection.Column:
-                // beams.rs:137 — sort_by_key is stable; List.Sort is not
+                // stable sort required; List.Sort is not stable
                 sorted = characters
                     .OrderBy(id => world.Terminal.Arena[(int)id.Value].InputCoord.Row)
                     .ToList();
@@ -143,7 +143,7 @@ public sealed class Beams : IEffect
     private CharId? GetNextCharacter(EngineWorld world, BeamsGroup group)
     {
         group.NextCharacterCounter -= 1.0;
-        // beams.rs:149 — FIFO remove(0)
+        // FIFO: take from the front
         CharId nextCharacter = group.Characters[0];
         group.Characters.RemoveAt(0);
         string? activeScene = world.Terminal.Arena[(int)nextCharacter.Value].Animation.ActiveScene;
@@ -362,7 +362,7 @@ public sealed class Beams : IEffect
                             {
                                 if (_pendingGroups.Count > 0)
                                 {
-                                    // beams.rs:379 — FIFO remove(0); outer for still runs remaining iterations
+                                    // FIFO: take from the front; the outer loop still runs its remaining iterations
                                     BeamsGroup next = _pendingGroups[0];
                                     _pendingGroups.RemoveAt(0);
                                     _activeGroups.Add(next);
@@ -382,7 +382,7 @@ public sealed class Beams : IEffect
                     foreach (BeamsGroup group in activeGroups)
                     {
                         group.NextCharacterCounter += group.Speed;
-                        // beams.rs:391 — int() truncation
+                        // int() truncation
                         long count = PyCompat.TruncToI64(group.NextCharacterCounter);
                         if (count > 1)
                         {
@@ -428,7 +428,7 @@ public sealed class Beams : IEffect
                                 break;
                             }
 
-                            // beams.rs:417 — FIFO remove(0)
+                            // FIFO: take from the front
                             List<CharId> nextGroup = _finalWipeGroups[0];
                             _finalWipeGroups.RemoveAt(0);
                             foreach (CharId id in nextGroup)

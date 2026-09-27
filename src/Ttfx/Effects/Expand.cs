@@ -5,7 +5,7 @@ using Ttfx.Utils;
 
 namespace Ttfx.Effects;
 
-/// <summary>expand, ported from effects/effect_expand.py. Transcribed from <c>effects/expand.rs</c>.</summary>
+/// <summary>expand, ported from effects/effect_expand.py.</summary>
 public sealed class ExpandConfig
 {
     public Easing ExpandEasing { get; set; } = Easing.InOutQuart;
@@ -18,7 +18,7 @@ public sealed class ExpandConfig
 public sealed class Expand : IEffect
 {
     private readonly ExpandConfig _config;
-    // HashMap in the reference: lookup only, iteration order is not contractual.
+    // Lookup only; iteration order is not contractual.
     private readonly Dictionary<CharId, ColorPair> _characterFinalColorMap;
 
     public Expand(ExpandConfig config)

@@ -14,7 +14,7 @@ public enum PourDirection
     Right,
 }
 
-/// <summary>pour, ported from effects/effect_pour.py. Transcribed from <c>effects/pour.rs</c>.</summary>
+/// <summary>pour, ported from effects/effect_pour.py.</summary>
 public sealed class PourConfig
 {
     public PourDirection PourDirection { get; set; } = PourDirection.Down;
@@ -33,7 +33,7 @@ public sealed class Pour : IEffect
 {
     private readonly PourConfig _config;
     private readonly List<List<CharId>> _pendingGroups;
-    // HashMap in the reference: lookup only, iteration order is not contractual.
+    // Lookup only; iteration order is not contractual.
     private readonly Dictionary<CharId, ColorPair> _characterFinalColorMap;
     private List<CharId> _currentGroup;
     private long _gap;
@@ -47,7 +47,7 @@ public sealed class Pour : IEffect
         _gap = 0;
     }
 
-    /// <summary>pour.rs parse_pour_direction.</summary>
+    /// <summary>parse_pour_direction.</summary>
     public static object ParsePourDirection(string s)
     {
         return s switch
@@ -259,7 +259,7 @@ public sealed class Pour : IEffect
         }
 
         _gap = 0;
-        // pour.rs:251 — remove(0) FIFO drain
+        // FIFO drain from the front
         _currentGroup = _pendingGroups[0];
         _pendingGroups.RemoveAt(0);
     }
@@ -270,7 +270,7 @@ public sealed class Pour : IEffect
         {
             if (_currentGroup.Count == 0 && _pendingGroups.Count > 0)
             {
-                // pour.rs:258 — remove(0) FIFO drain
+                // FIFO drain from the front
                 _currentGroup = _pendingGroups[0];
                 _pendingGroups.RemoveAt(0);
             }
@@ -283,7 +283,7 @@ public sealed class Pour : IEffect
                     {
                         if (_currentGroup.Count > 0)
                         {
-                            // pour.rs:264 — remove(0) FIFO drain
+                            // FIFO drain from the front
                             CharId nextCharacter = _currentGroup[0];
                             _currentGroup.RemoveAt(0);
                             world.Terminal.SetCharacterVisibility(nextCharacter, true);

@@ -7,20 +7,42 @@ namespace Ttfx.Utils;
 /// Insertion-ordered string-keyed map with Python-dict iteration semantics.
 /// Used everywhere upstream iterates dict values: motion.paths,
 /// animation.scenes, effect-level dicts.
-/// Representation half of the Rust index-threshold / pointer-equality cache is
-/// dropped; insert/overwrite/remove order is the semantic half.
-/// Transcribed from <c>utils/ordered_map.rs</c>.
+/// Insert/overwrite/remove order is the semantics that matter.
 /// </summary>
 public sealed class OrderedMap<T>
 {
     private readonly List<(string Key, T Value)> _entries = new List<(string, T)>();
     private readonly Dictionary<string, int> _index = new Dictionary<string, int>(StringComparer.Ordinal);
 
+    /// <summary>
+    /// Slot of the last key found. Callers hold on to the map's own key
+    /// (<see cref="SharedKey"/>) and look it up every tick, so a key that is
+    /// the very string stored at this slot is found without hashing.
+    /// </summary>
+    private int _hint;
+
     public int Count => _entries.Count;
 
     public bool IsEmpty => _entries.Count == 0;
 
-    public bool ContainsKey(string key) => _index.ContainsKey(key);
+    public bool ContainsKey(string key) => Find(key) >= 0;
+
+    private int Find(string key)
+    {
+        int hint = _hint;
+        if (hint < _entries.Count && ReferenceEquals(_entries[hint].Key, key))
+        {
+            return hint;
+        }
+
+        if (_index.TryGetValue(key, out int position))
+        {
+            _hint = position;
+            return position;
+        }
+
+        return -1;
+    }
 
     /// <summary>Python dict semantics: overwriting an existing key keeps its position.</summary>
     public void Insert(string key, T value)
@@ -37,7 +59,8 @@ public sealed class OrderedMap<T>
 
     public T? Get(string key)
     {
-        return _index.TryGetValue(key, out int position) ? _entries[position].Value : default;
+        int position = Find(key);
+        return position >= 0 ? _entries[position].Value : default;
     }
 
     /// <summary>
@@ -46,7 +69,8 @@ public sealed class OrderedMap<T>
     /// </summary>
     public string? SharedKey(string key)
     {
-        return _index.TryGetValue(key, out int position) ? _entries[position].Key : null;
+        int position = Find(key);
+        return position >= 0 ? _entries[position].Key : null;
     }
 
     /// <summary>
@@ -54,7 +78,8 @@ public sealed class OrderedMap<T>
     /// </summary>
     public int? Slot(string key)
     {
-        return _index.TryGetValue(key, out int position) ? position : null;
+        int position = Find(key);
+        return position >= 0 ? position : null;
     }
 
     public T At(int slot) => _entries[slot].Value;

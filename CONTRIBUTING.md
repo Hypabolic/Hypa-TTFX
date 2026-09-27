@@ -1,8 +1,8 @@
 # Contributing to hypa-ttfx
 
 Thanks for wanting to help. This repo is a standalone C# / .NET 10 Native-AOT
-CLI and library (`Hypa.Ttfx`). It began as a port of ttfx / TerminalTextEffects
-and now evolves on its own.
+CLI and library (`Hypa.Ttfx`). It began as a port of TerminalTextEffects and
+now evolves on its own.
 
 ## How to help
 
@@ -50,7 +50,7 @@ dotnet run --project tests/Ttfx.Tests -c Release --no-launch-profile
 | `src/Ttfx` | Packable library (`Hypa.Ttfx`) |
 | `src/Ttfx.Cli` | Native-AOT CLI and `dotnet tool` (`Hypa.Ttfx.Tool`) |
 | `tests/Ttfx.Tests` | In-repo unit harness (no xUnit / NUnit) |
-| `tools/parity` | Optional byte-compare suites against pinned ttfx |
+| `tools/parity` | Optional byte-compare suites against the pinned reference binary |
 | `bin/` | `build`, `test`, `pack` |
 
 Public library entry point: `Ttfx.TextEffects` / `Ttfx.TextEffectOptions`.
@@ -63,9 +63,9 @@ or the remaining parity suites.
 1. **No `PackageReference` in this repo.** `bin/test` greps for it.
 2. **Invariant culture.** `Parse`, `ToLower`, `StartsWith`, and `IndexOf` need
    `InvariantCulture` / `Ordinal` (or a char overload). Defaults are culture-sensitive.
-3. **One codepoint is one cell.** Use `Rune`, not `char`. Rust `str::len()` is
-   bytes, not `String.Length`.
-4. **Float → int goes through `PyCompat.TruncToI64`.** `as i64` truncates toward
+3. **One codepoint is one cell.** Use `Rune`, not `char`. Byte lengths are
+   UTF-8 bytes, not `String.Length`.
+4. **Float → int goes through `PyCompat.TruncToI64`.** It truncates toward
    zero; `Math.Round` / `Convert.ToInt64` do not. A rounded count changes the
    RNG draw sequence.
 5. **Do not substitute "equivalent" float functions.** Not `x * x` for
@@ -81,9 +81,7 @@ or the remaining parity suites.
    rounding, integer floor-division gradients, looping scenes that report
    complete) without an issue that treats the change as intentional.
 
-Keep function names and structure close to the existing code so reviews stay
-side-by-side. Comments that cite historical line numbers can stay; they are
-not a promise that we still match those sources.
+Keep function names and structure close to the existing code.
 
 ## Pull requests
 

@@ -5,7 +5,6 @@ namespace Ttfx.Utils;
 
 /// <summary>
 /// 1-based canvas coordinate: column grows right, row grows UP (origin bottom-left).
-/// Transcribed from <c>utils/geometry.rs</c>.
 /// </summary>
 public readonly record struct Coord(long Column, long Row)
 {
@@ -34,7 +33,6 @@ internal readonly struct FloatPoint
 
 /// <summary>
 /// Coord and geometry math, ported from utils/geometry.py.
-/// Transcribed from <c>utils/geometry.rs</c>.
 /// </summary>
 /// <remarks>
 /// Upstream wraps every function in lru_cache; behavior is identical without

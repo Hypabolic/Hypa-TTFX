@@ -5,7 +5,7 @@ using Ttfx.Utils;
 
 namespace Ttfx.Effects;
 
-/// <summary>wipe, ported from effects/effect_wipe.py. Transcribed from <c>effects/wipe.rs</c>.</summary>
+/// <summary>wipe, ported from effects/effect_wipe.py.</summary>
 public sealed class WipeConfig
 {
     public CharacterGroup WipeDirection { get; set; } = CharacterGroup.DiagonalTopLeftToBottomRight;

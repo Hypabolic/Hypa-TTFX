@@ -6,7 +6,7 @@ using Ttfx.Utils;
 
 namespace Ttfx.Effects;
 
-/// <summary>vhstape, ported from effects/effect_vhstape.py. Transcribed from <c>effects/vhstape.rs</c>.</summary>
+/// <summary>vhstape, ported from effects/effect_vhstape.py.</summary>
 public sealed class VhsTapeConfig
 {
     public List<Color> GlitchLineColors { get; set; } = new List<Color>();
@@ -141,7 +141,7 @@ public sealed class VhsTape : IEffect
                 string bwdScn = ch.Animation.NewScene(false, SyncMetric.Step, null, "rgb_glitch_bwd", usesPre);
                 Scene bwdScene = ch.Animation.Scenes.Get(bwdScn)
                     ?? throw new EngineInvariantException("rgb_glitch_bwd scene");
-                // vhstape.rs:209 — .rev() order is behavior.
+                // Reverse order is behavior.
                 for (int ci = glitchLineColors.Count - 1; ci >= 0; ci--)
                 {
                     Color color = glitchLineColors[ci];

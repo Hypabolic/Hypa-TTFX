@@ -6,7 +6,7 @@ using Ttfx.Utils;
 
 namespace Ttfx.Effects;
 
-/// <summary>swarm, ported from effects/effect_swarm.py. Transcribed from <c>effects/swarm.rs</c>.</summary>
+/// <summary>swarm, ported from effects/effect_swarm.py.</summary>
 public sealed class SwarmConfig
 {
     public List<Color> BaseColor { get; set; } = new List<Color>();

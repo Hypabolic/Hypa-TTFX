@@ -8,7 +8,6 @@ namespace Ttfx.Engine;
 /// <summary>
 /// Waypoints are cloned constantly — into segments, into origin segments on
 /// every path activation, and into event keys.
-/// Transcribed from <c>engine/motion.rs</c>.
 /// </summary>
 public sealed class Waypoint
 {
@@ -154,7 +153,7 @@ public sealed class Path
 
     public Waypoint QueryWaypoint(string waypointId)
     {
-        // Length captured once: query does not emit (motion.rs:144-149).
+        // Length captured once: query does not emit.
         int count = Waypoints.Count;
         for (int i = 0; i < count; i++)
         {
@@ -197,13 +196,33 @@ public sealed class Path
 /// engine/motion.py Motion: per-character movement state. <c>active_path</c> and
 /// <c>completed_path</c> are path ids (upstream holds object references; Path
 /// equality is by id).
-/// Transcribed from <c>engine/motion.rs</c>.
 /// </summary>
 public sealed class Motion
 {
     public OrderedMap<Path> Paths { get; } = new OrderedMap<Path>();
 
-    public Coord CurrentCoord { get; set; }
+    public Coord CurrentCoord
+    {
+        get => _currentCoord;
+        set
+        {
+            _currentCoord = value;
+            if (_render is RenderState render)
+            {
+                render.Coords[_renderSlot] = value;
+            }
+        }
+    }
+
+    private Coord _currentCoord;
+    private RenderState? _render;
+    private int _renderSlot;
+
+    internal void AttachRender(RenderState render, int slot)
+    {
+        _render = render;
+        _renderSlot = slot;
+    }
 
     public Coord PreviousCoord { get; set; }
 

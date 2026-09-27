@@ -11,7 +11,7 @@ namespace Ttfx.Tests;
 
 /// <summary>
 /// Goldens asserted against the AOT-published <c>artifacts/ttfx</c>, not
-/// <c>dotnet run</c>. Tolerances match <c>easing_goldens.rs</c>: bit-exact on
+/// <c>dotnet run</c>. Tolerances: bit-exact on
 /// Linux/glibc except CubicBezier (1 ulp); 1e-15 absolute elsewhere.
 /// </summary>
 internal static class EasingGeometryGoldens
@@ -122,7 +122,7 @@ internal static class EasingGeometryGoldens
         double withFinal = reconstructed + Geometry.FindLengthOfLine(prev, atEnd, true);
         Harness.AssertTrue("omitted t=0.9..1.0 span is positive", withFinal > length);
 
-        // Pin the Python/Rust fixture bits (LE hex of the short length).
+        // Pin the reference fixture bits (LE hex of the short length).
         string bits = Fbits(length);
         Harness.AssertTrue(
             "pinned short length within 1e-15 of fixture",

@@ -12,7 +12,7 @@ internal static class PyCompatTests
         yield return new TestCase("TruncToUsize two-step wrap", TruncToUsize);
         yield return new TestCase("FloorDiv floors negatives", FloorDiv);
         yield return new TestCase("PyMod sign-of-divisor", PyMod);
-        yield return new TestCase("RoundHalfEven pinned vs Rust", RoundHalfEven);
+        yield return new TestCase("RoundHalfEven pinned values", RoundHalfEven);
         yield return new TestCase("FMin/FMax NaN and signed zero", FMinFMax);
     }
 

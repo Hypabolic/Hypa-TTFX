@@ -8,7 +8,6 @@ namespace Ttfx.Utils;
 /// The original constructor argument, preserved because upstream <c>Color.__eq__</c>
 /// and <c>__hash__</c> compare <c>color_arg</c> — <c>Color(255) != Color("ffffff")</c>
 /// even when they resolve to the same RGB. Dict/set keying depends on this.
-/// Transcribed from <c>utils/graphics.rs</c>.
 /// </summary>
 public abstract class ColorArg : IEquatable<ColorArg>
 {
@@ -53,7 +52,7 @@ public abstract class ColorArg : IEquatable<ColorArg>
 }
 
 /// <summary>
-/// Color. Equality is on <c>color_arg</c> (graphics.rs PartialEq):
+/// Color. Equality is on <c>color_arg</c>:
 /// <c>Color(255) != Color("ffffff")</c> even when RGB matches.
 /// <c>#000000</c> vs <c>000000</c> compare equal because Hex stores the stripped rgb_color.
 /// </summary>
@@ -63,7 +62,7 @@ public sealed class Color : IEquatable<Color>
 
     public ColorArg ColorArg { get; }
 
-    /// <summary>Some(code) when constructed from an xterm int, None for hex strings.</summary>
+    /// <summary>The code when constructed from an xterm int, null for hex strings.</summary>
     public byte? XtermColor { get; }
 
     /// <summary>hex string without '#'.</summary>
@@ -121,7 +120,7 @@ public sealed class Color : IEquatable<Color>
     public (byte R, byte G, byte B) RgbInts() => (_rgb[0], _rgb[1], _rgb[2]);
 
     /// <summary>
-    /// Equality is on <c>color_arg</c> (graphics.rs:97-106):
+    /// Equality is on <c>color_arg</c>:
     /// <c>Color(255) != Color("ffffff")</c> even when RGB matches.
     /// </summary>
     public bool Equals(Color? other)
@@ -469,7 +468,7 @@ public sealed class Gradient
 public static class Graphics
 {
     /// <summary>
-    /// graphics.rs:361-366. <c>{i:02x}</c> for non-negative; <c>-{:01x}</c> of the
+    /// Two lowercase hex digits for non-negative; <c>-</c> and at least one hex digit of the
     /// magnitude when negative. C# <c>i.ToString("x2")</c> on a negative int is
     /// two's complement (<c>fffffffd</c>) and must not be used.
     /// </summary>

@@ -226,7 +226,7 @@ internal static class RngVectors
             rng.Random();
         }
 
-        // main.rs: rng = ctx.rng — same instance, state carried forward.
+        // Same RNG instance: state carried forward.
         Rng rebuilt = rng;
         double afterRebuild = rebuilt.Random();
 

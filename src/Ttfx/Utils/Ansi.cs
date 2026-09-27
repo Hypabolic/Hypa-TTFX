@@ -5,7 +5,6 @@ namespace Ttfx.Utils;
 
 /// <summary>
 /// ANSI escape sequences, ported from utils/ansitools.py + utils/colorterm.py.
-/// Transcribed from <c>utils/ansi.rs</c>.
 /// </summary>
 public static class Ansi
 {

@@ -6,7 +6,7 @@ using Ttfx.Utils;
 
 namespace Ttfx.Effects;
 
-/// <summary>rain, ported from effects/effect_rain.py. Transcribed from <c>effects/rain.rs</c>.</summary>
+/// <summary>rain, ported from effects/effect_rain.py.</summary>
 public sealed class RainConfig
 {
     public List<Color> RainColors { get; set; } = new List<Color>();
@@ -22,9 +22,9 @@ public sealed class Rain : IEffect
 {
     private readonly RainConfig _config;
     private readonly List<CharId> _pendingChars;
-    // BTreeMap in rain.rs — SortedDictionary min-key iteration matches.
+    // Ordered by key: SortedDictionary min-key iteration is the required order.
     private readonly SortedDictionary<long, List<CharId>> _groupByRow;
-    // HashMap in the reference: lookup only, iteration order is not contractual.
+    // Lookup only; iteration order is not contractual.
     private readonly Dictionary<CharId, ColorPair> _characterFinalColorMap;
 
     public Rain(RainConfig config)
@@ -198,7 +198,7 @@ public sealed class Rain : IEffect
             _pendingChars.Add(id);
         }
 
-        // rain.rs:219 — sort_by_key is stable; List.Sort is not
+        // stable sort required; List.Sort is not stable
         List<CharId> sortedChars = _pendingChars
             .OrderBy(id => world.Terminal.Arena[(int)id.Value].InputCoord.Row)
             .ToList();
@@ -248,7 +248,7 @@ public sealed class Rain : IEffect
                         break;
                     }
 
-                    // rain.rs:240-241 — Randint(0, pending.len()-1) then RemoveAt
+                    // Randint(0, pending.Count - 1) then RemoveAt
                     int index = (int)world.Rng.Randint(0, _pendingChars.Count - 1);
                     CharId nextCharacter = _pendingChars[index];
                     _pendingChars.RemoveAt(index);

@@ -6,7 +6,7 @@ using Ttfx.Utils;
 
 namespace Ttfx.Effects;
 
-/// <summary>colorshift, ported from effects/effect_colorshift.py. Transcribed from <c>effects/colorshift.rs</c>.</summary>
+/// <summary>colorshift, ported from effects/effect_colorshift.py.</summary>
 public sealed class ColorShiftConfig
 {
     public List<Color> GradientStops { get; set; } = new List<Color>();
@@ -26,7 +26,7 @@ public sealed class ColorShiftConfig
 public sealed class ColorShift : IEffect
 {
     private readonly ColorShiftConfig _config;
-    // HashMap in the reference: lookup only, iteration order is not contractual.
+    // Lookup only; iteration order is not contractual.
     private readonly Dictionary<CharId, Color> _characterFinalColorMap;
     private readonly Dictionary<CharId, long> _loopTrackerMap;
 
@@ -66,7 +66,7 @@ public sealed class ColorShift : IEffect
 
         count += 1;
         _loopTrackerMap[character] = count;
-        // colorshift.rs:94 — cycles == 0 never terminates
+        // cycles == 0 never terminates
         if (_config.Cycles == 0 || count < _config.Cycles)
         {
             world.ActivateScene(this, character, "gradient");
@@ -149,7 +149,7 @@ public sealed class ColorShift : IEffect
                         inputCoord),
                     _ => throw new EngineInvariantException("travel direction"),
                 };
-                // colorshift.rs:167 — int() truncation
+                // int() truncation
                 long shiftDistance = PyCompat.TruncToI64(gradient.Spectrum.Count * directionIndex);
                 if (_config.ReverseTravelDirection)
                 {

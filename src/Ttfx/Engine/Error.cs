@@ -4,7 +4,6 @@ namespace Ttfx.Engine;
 
 /// <summary>
 /// Engine error taxonomy. Error <em>conditions</em> match upstream; message text may differ.
-/// Transcribed from <c>engine/error.rs</c>.
 /// </summary>
 public class EngineException : Exception
 {

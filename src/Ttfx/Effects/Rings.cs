@@ -6,7 +6,7 @@ using Ttfx.Utils;
 
 namespace Ttfx.Effects;
 
-/// <summary>rings, ported from effects/effect_rings.py. Transcribed from <c>effects/rings.rs</c>.</summary>
+/// <summary>rings, ported from effects/effect_rings.py.</summary>
 public sealed class RingsConfig
 {
     public List<Color> RingColors { get; set; } = new List<Color>();
@@ -73,7 +73,7 @@ internal sealed class Ring
         }
 
         EffectCharacter ch = world.Terminal.Arena[(int)id.Value];
-        // rings.rs:117 — keyed remove from insertion-ordered paths map
+        // keyed remove from insertion-ordered paths map
         ch.Motion.Paths.Remove("disperse");
         string pathId = ch.Motion.NewPath(0.14, null, null, 0, true, "disperse");
         Path path = ch.Motion.Paths.Get(pathId)
@@ -366,7 +366,7 @@ public sealed class Rings : IEffect
             radius += ringGap;
         }
 
-        // rings.rs:423 — pending_iter.pop_front()
+        // take the next pending entry from the front
         var pendingQueue = new Ttfx.Utils.Queue<CharId>();
         foreach (CharId id in pendingChars)
         {

@@ -8,7 +8,6 @@ namespace Ttfx.Engine;
 /// <summary>
 /// One effect: build() once (upstream iterator __init__/build), then
 /// next_frame() until None (upstream __next__/StopIteration).
-/// Transcribed from <c>engine/effect.rs</c>.
 /// </summary>
 public enum RunOutcome
 {
@@ -19,8 +18,7 @@ public enum RunOutcome
 }
 
 /// <summary>
-/// Effect trait run loop (base_effect.py equivalents).
-/// Transcribed from <c>engine/effect.rs</c>.
+/// Effect run loop (base_effect.py equivalents).
 /// </summary>
 public static class EffectRunner
 {
@@ -42,9 +40,11 @@ public static class EffectRunner
         Stream stdout,
         TextWriter stderr)
     {
+        world.FrameTextDeferred = true;
         effect.Build(world);
         ulong count = 0;
         bool complete = false;
+        Span<byte> lengthLine = stackalloc byte[24];
         while (true)
         {
             string? frame = effect.NextFrame(world);
@@ -54,10 +54,10 @@ public static class EffectRunner
                 break;
             }
 
-            byte[] data = Encoding.UTF8.GetBytes(frame);
-            byte[] lengthLine = Encoding.UTF8.GetBytes(
-                data.Length.ToString(CultureInfo.InvariantCulture) + "\n");
-            stdout.Write(lengthLine);
+            ReadOnlySpan<byte> data = world.FrameBytes(frame).Span;
+            data.Length.TryFormat(lengthLine, out int digits, provider: CultureInfo.InvariantCulture);
+            lengthLine[digits] = (byte)'\n';
+            stdout.Write(lengthLine[..(digits + 1)]);
             stdout.Write(data);
             stdout.Write("\n"u8);
             count += 1;
@@ -95,6 +95,7 @@ public static class EffectRunner
         Stream stdout,
         bool stopOnResize = false)
     {
+        world.FrameTextDeferred = true;
         effect.Build(world);
         world.Terminal.PrepCanvas(stdout);
         RunOutcome outcome = RunOutcome.Complete;
@@ -120,7 +121,7 @@ public static class EffectRunner
                     break;
                 }
 
-                world.Terminal.PrintFrame(stdout, frame);
+                world.Terminal.PrintFrame(stdout, world.FrameBytes(frame).Span);
             }
         }
         finally

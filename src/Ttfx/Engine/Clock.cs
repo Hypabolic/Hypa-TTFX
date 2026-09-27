@@ -6,7 +6,6 @@ namespace Ttfx.Engine;
 /// <summary>
 /// Virtual/real clock. Matrix reads wall time, thunderstorm
 /// reads monotonic time; the parity harness swaps in the virtual variant.
-/// Transcribed from <c>engine/ctx.rs</c>.
 /// </summary>
 public abstract class Clock
 {
@@ -40,7 +39,7 @@ public abstract class Clock
 
     public static Clock MakeReal()
     {
-        // Capture epoch once as fractional seconds (ctx.rs:43-47); add monotonic
+        // Capture epoch once as fractional seconds; add monotonic
         // elapsed thereafter. Do not use ToUnixTimeMilliseconds().
         double wallStart = (DateTime.UtcNow - DateTime.UnixEpoch).TotalSeconds;
         return new Real(Stopwatch.GetTimestamp(), wallStart);

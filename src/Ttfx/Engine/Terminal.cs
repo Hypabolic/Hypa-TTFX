@@ -13,7 +13,6 @@ namespace Ttfx.Engine;
 
 /// <summary>
 /// Terminal: config, canvas assembly, character queries, renderer.
-/// Transcribed from <c>engine/terminal.rs</c>.
 /// </summary>
 public sealed class TerminalConfig
 {
@@ -104,7 +103,7 @@ public readonly record struct CharacterFilter(
 /// <summary>
 /// Everything about the drawing area that is derived from the terminal size.
 /// A resize only matters if recomputing this yields something different, so it
-/// is factored out of Terminal::new rather than inlined there.
+/// is factored out of the Terminal constructor rather than inlined there.
 /// </summary>
 public readonly record struct Layout(
     long CanvasHeight,
@@ -145,11 +144,31 @@ public sealed class Terminal
     public List<CharId> InnerFillCharacters { get; } = new List<CharId>();
     public List<CharId> OuterFillCharacters { get; } = new List<CharId>();
 
+    /// <summary>Every visual this run builds (see <see cref="VisualPool"/>).</summary>
+    internal VisualPool Pool { get; }
+
     private readonly List<CharId> _visibleCharacters = new List<CharId>();
     private readonly List<int> _visiblePositions;
+    private readonly RenderState _render = new RenderState();
     private uint[] _renderCells = [];
+    /// <summary>
+    /// Winner visual per cell, filled alongside <see cref="_renderCells"/> so the
+    /// emitter never goes back through the arena.
+    /// </summary>
+    private CharacterVisual?[] _renderVisuals = [];
+    /// <summary>
+    /// The visual each cell was last emitted with (null for a blank cell).
+    /// Visuals are immutable, so the same reference means the same bytes.
+    /// </summary>
+    private CharacterVisual?[] _emittedVisuals = [];
+    /// <summary>Emitted bytes per row (index 0 is the bottom row).</summary>
+    private byte[][] _rowBytes = [];
+    private int[] _rowLengths = [];
+    /// <summary>False until every row has been emitted for the current geometry.</summary>
+    private bool _rowsEmitted;
     private readonly ArrayBufferWriter<byte> _outputBuffer = new ArrayBufferWriter<byte>();
     private readonly byte[] _moveCursorToTop;
+    private byte[] _printBuffer = [];
     private readonly long _frameRate;
     private long _lastTimePrinted;
     /// <summary>Stopwatch timestamp of the latest SIGWINCH; 0 = none. Shared with Interlocked.</summary>
@@ -165,9 +184,16 @@ public sealed class Terminal
         List<long> inputLineLengths,
         Layout layout,
         List<CharId> inputCharacters,
-        Dictionary<Coord, CharId> characterByInputCoord)
+        Dictionary<Coord, CharId> characterByInputCoord,
+        VisualPool pool)
     {
         Config = config;
+        Pool = pool;
+        for (int slot = 0; slot < arena.Count; slot++)
+        {
+            _render.Attach(arena[slot], slot);
+        }
+
         Canvas = canvas;
         Arena = arena;
         NextCharacterId = nextCharacterId;
@@ -212,7 +238,8 @@ public sealed class Terminal
         uint nextCharacterId = 0;
         var inputColorsFrequency = new ColorFrequency();
 
-        var preprocessor = new Preprocessor(arena, nextCharacterId, inputColorsFrequency, config);
+        var pool = new VisualPool();
+        var preprocessor = new Preprocessor(arena, nextCharacterId, inputColorsFrequency, config) { Pool = pool };
         List<List<CharId>> preprocessedLines = preprocessor.Preprocess(inputData);
         nextCharacterId = preprocessor.NextCharacterId;
 
@@ -253,14 +280,15 @@ public sealed class Terminal
             inputLineLengths,
             layout,
             inputCharacters,
-            characterByInputCoord);
+            characterByInputCoord,
+            pool);
         terminal.MakeFillCharacters();
         terminal.SetupCharacterNeighbors();
         return terminal;
     }
 
     /// <summary>
-    /// EngineCtx preexisting_colors_present scan (ctx.rs:108-111): any surviving
+    /// preexisting_colors_present scan: any surviving
     /// input character carries an input fg or bg captured at parse time.
     /// </summary>
     public bool PreexistingColorsPresent()
@@ -290,7 +318,7 @@ public sealed class Terminal
                 var coord = Coord.New(column, row);
                 if (!CharacterByInputCoord.ContainsKey(coord))
                 {
-                    var fill = new EffectCharacter(NextCharacterId, " ", column, row);
+                    var fill = new EffectCharacter(NextCharacterId, " ", column, row, Pool);
                     fill.IsFillCharacter = true;
                     fill.Animation.NoColor = Config.NoColor;
                     fill.Animation.UseXtermColors = Config.XtermColors;
@@ -299,6 +327,7 @@ public sealed class Terminal
                     NextCharacterId += 1;
                     var id = new CharId((uint)Arena.Count);
                     Arena.Add(fill);
+                    _render.Attach(fill, (int)id.Value);
                     CharacterByInputCoord[coord] = id;
                     if (Canvas.TextLeft <= column
                         && column <= Canvas.TextRight
@@ -363,7 +392,7 @@ public sealed class Terminal
         {
             int position = _visiblePositions[arenaIndex];
             _visiblePositions[arenaIndex] = NotVisible;
-            // swap_remove: swap-with-last, not a shifting RemoveAt (terminal.rs:336).
+            // Swap-with-last removal, not a shifting RemoveAt.
             int last = _visibleCharacters.Count - 1;
             _visibleCharacters[position] = _visibleCharacters[last];
             _visibleCharacters.RemoveAt(last);
@@ -396,37 +425,59 @@ public sealed class Terminal
         if (_renderCells.Length != cellCount)
         {
             _renderCells = new uint[cellCount];
+            _renderVisuals = new CharacterVisual?[cellCount];
         }
 
         Array.Fill(_renderCells, EmptyRenderCell);
+        Array.Clear(_renderVisuals);
+        uint[] cells = _renderCells;
+        CharacterVisual?[] visuals = _renderVisuals;
+        Coord[] coords = _render.Coords;
+        long[] layers = _render.Layers;
+        uint[] characterIds = _render.CharacterIds;
+        CharacterVisual?[] characterVisuals = _render.Visuals;
 
         // The old implementation sorted every visible character by painter
         // order and overwrote cells in that order.  A cell only needs the
         // maximum key, so select that winner directly and avoid the per-frame
         // allocation and O(n log n) sort.
-        foreach (CharId id in _visibleCharacters)
+        long rowOffset = CanvasRowOffset;
+        long columnOffset = CanvasColumnOffset;
+        long visibleBottom = VisibleBottom;
+        long visibleTop = VisibleTop;
+        long visibleLeft = VisibleLeft;
+        long visibleRight = VisibleRight;
+        int visibleCount = _visibleCharacters.Count;
+        for (int i = 0; i < visibleCount; i++)
         {
-            EffectCharacter ch = Arena[(int)id.Value];
-            long row = ch.Motion.CurrentCoord.Row + CanvasRowOffset;
-            long column = ch.Motion.CurrentCoord.Column + CanvasColumnOffset;
-            if (VisibleBottom <= row
-                && row <= VisibleTop
-                && VisibleLeft <= column
-                && column <= VisibleRight)
+            uint slot = _visibleCharacters[i].Value;
+            Coord coord = coords[slot];
+            long row = coord.Row + rowOffset;
+            long column = coord.Column + columnOffset;
+            if (visibleBottom <= row
+                && row <= visibleTop
+                && visibleLeft <= column
+                && column <= visibleRight)
             {
                 int cellIndex = (int)(row - 1) * width + (int)(column - 1);
-                uint cell = _renderCells[cellIndex];
+                uint cell = cells[cellIndex];
+                bool wins;
                 if (cell == EmptyRenderCell)
                 {
-                    _renderCells[cellIndex] = id.Value;
+                    wins = true;
                 }
                 else
                 {
-                    EffectCharacter painted = Arena[(int)cell];
-                    if ((ch.Layer, ch.CharacterId).CompareTo((painted.Layer, painted.CharacterId)) > 0)
-                    {
-                        _renderCells[cellIndex] = id.Value;
-                    }
+                    long layer = layers[slot];
+                    long paintedLayer = layers[cell];
+                    wins = layer > paintedLayer
+                        || (layer == paintedLayer && characterIds[slot] > characterIds[cell]);
+                }
+
+                if (wins)
+                {
+                    cells[cellIndex] = slot;
+                    visuals[cellIndex] = characterVisuals[slot];
                 }
             }
         }
@@ -451,11 +502,41 @@ public sealed class Terminal
         _outputBuffer.ResetWrittenCount();
         if (_outputBuffer.FreeCapacity < minimumCapacity)
         {
-            // Grow the recycled buffer like Rust out.reserve(minimum_capacity).
+            // Grow the recycled buffer to at least minimum_capacity.
             // GetSpan only ensures capacity; WrittenCount stays 0.
             _ = _outputBuffer.GetSpan(minimumCapacity);
         }
 
+        int cellCount = width * height;
+        if (_emittedVisuals.Length != cellCount || _rowBytes.Length != height)
+        {
+            _emittedVisuals = new CharacterVisual?[cellCount];
+            _rowBytes = new byte[height][];
+            _rowLengths = new int[height];
+            for (int row = 0; row < height; row++)
+            {
+                _rowBytes[row] = new byte[Math.Max(width, 1)];
+            }
+
+            _rowsEmitted = false;
+        }
+
+        // Only rows whose cells changed visual since the last frame are
+        // re-emitted; the rest keep their bytes.
+        for (int rowIndex = 0; rowIndex < height; rowIndex++)
+        {
+            ReadOnlySpan<CharacterVisual?> fresh = _renderVisuals.AsSpan(rowIndex * width, width);
+            Span<CharacterVisual?> emitted = _emittedVisuals.AsSpan(rowIndex * width, width);
+            if (_rowsEmitted && SameVisuals(fresh, emitted))
+            {
+                continue;
+            }
+
+            fresh.CopyTo(emitted);
+            EmitRow(rowIndex, fresh);
+        }
+
+        _rowsEmitted = true;
         for (int rowIndex = height - 1; rowIndex >= 0; rowIndex--)
         {
             if (rowIndex + 1 < height)
@@ -463,27 +544,52 @@ public sealed class Terminal
                 _outputBuffer.Write("\n"u8);
             }
 
-            int rowStart = rowIndex * width;
-            for (int col = 0; col < width; col++)
+            _outputBuffer.Write(_rowBytes[rowIndex].AsSpan(0, _rowLengths[rowIndex]));
+        }
+
+        LastFrame = _outputBuffer.WrittenMemory;
+        return LastFrame;
+    }
+
+    /// <summary>The bytes of the most recent <see cref="GetFormattedOutputString"/>.</summary>
+    internal ReadOnlyMemory<byte> LastFrame { get; private set; }
+
+    private static bool SameVisuals(ReadOnlySpan<CharacterVisual?> fresh, ReadOnlySpan<CharacterVisual?> emitted)
+    {
+        for (int i = 0; i < fresh.Length; i++)
+        {
+            if (!ReferenceEquals(fresh[i], emitted[i]))
             {
-                uint cell = _renderCells[rowStart + col];
-                if (cell == EmptyRenderCell)
-                {
-                    _outputBuffer.Write(" "u8);
-                }
-                else
-                {
-                    Arena[(int)cell].Animation.CurrentCharacterVisual.FormattedSymbol.AppendTo(_outputBuffer);
-                }
+                return false;
             }
         }
 
-        return _outputBuffer.WrittenMemory;
+        return true;
+    }
+
+    private void EmitRow(int rowIndex, ReadOnlySpan<CharacterVisual?> visuals)
+    {
+        byte[] bytes = _rowBytes[rowIndex];
+        int length = 0;
+        foreach (CharacterVisual? visual in visuals)
+        {
+            ReadOnlySpan<byte> symbol = visual is null ? " "u8 : visual.FormattedSymbol.Bytes;
+            if (length + symbol.Length > bytes.Length)
+            {
+                Array.Resize(ref bytes, Math.Max(bytes.Length * 2, length + symbol.Length));
+                _rowBytes[rowIndex] = bytes;
+            }
+
+            symbol.CopyTo(bytes.AsSpan(length));
+            length += symbol.Length;
+        }
+
+        _rowLengths[rowIndex] = length;
     }
 
     /// <summary>
     /// shutil.get_terminal_size semantics: COLUMNS/LINES env vars win if both
-    /// parse as i64 (Rust grammar — no surrounding whitespace); else query the
+    /// parse as i64 (strict grammar — no surrounding whitespace); else query the
     /// tty; on failure (80, 24). Per-axis override when only one env var parses.
     /// </summary>
     public static (long Width, long Height) GetTerminalDimensions()
@@ -512,7 +618,7 @@ public sealed class Terminal
             return null;
         }
 
-        // Rust parse::<i64>() rejects surrounding whitespace.
+        // The strict grammar rejects surrounding whitespace.
         if (ValueParsers.TryParseI64(value, out long parsed))
         {
             return parsed;
@@ -739,7 +845,7 @@ public sealed class Terminal
     /// </summary>
     public CharId AddCharacter(string symbol, Coord coord)
     {
-        var ch = new EffectCharacter(NextCharacterId, symbol, coord.Column, coord.Row);
+        var ch = new EffectCharacter(NextCharacterId, symbol, coord.Column, coord.Row, Pool);
         ch.Animation.NoColor = Config.NoColor;
         ch.Animation.UseXtermColors = Config.XtermColors;
         ch.Animation.ExistingColorHandling = Config.ExistingColorHandling;
@@ -747,6 +853,7 @@ public sealed class Terminal
         NextCharacterId += 1;
         var id = new CharId((uint)Arena.Count);
         Arena.Add(ch);
+        _render.Attach(ch, (int)id.Value);
         AddedCharacters.Add(id);
         return id;
     }
@@ -855,7 +962,7 @@ public sealed class Terminal
             case CharacterSort.OutsideRowToMiddle:
             case CharacterSort.MiddleRowToOutside:
             {
-                // upstream: alternate pop(0)/pop(-1) (terminal.rs:409)
+                // upstream: alternate pop(0)/pop(-1)
                 var deque = new LinkedList<CharId>(all);
                 var interleaved = new List<CharId>(deque.Count);
                 bool fromFront = true;
@@ -1089,7 +1196,6 @@ public sealed class Terminal
     /// <summary>
     /// prep_canvas: hide cursor, optionally reposition for --reuse-canvas,
     /// scroll blank rows for the visible area, DEC save.
-    /// Transcribed from <c>engine/terminal.rs</c>.
     /// </summary>
     public void PrepCanvas(Stream output)
     {
@@ -1117,7 +1223,6 @@ public sealed class Terminal
 
     /// <summary>
     /// restore_cursor: honour --no-eol / --no-restore-cursor.
-    /// Transcribed from <c>engine/terminal.rs</c>.
     /// </summary>
     public void RestoreCursor(Stream output, string endSymbol)
     {
@@ -1145,7 +1250,6 @@ public sealed class Terminal
     /// canvas and no anchor offsets most resizes leave every rendered cell
     /// exactly where it was, and restarting for those is pure loss. Explicitly
     /// ignored dimensions are fixed by definition.
-    /// Transcribed from <c>engine/terminal.rs</c> 622-640.
     /// </summary>
     public bool ResizeSettled()
     {
@@ -1182,7 +1286,6 @@ public sealed class Terminal
     /// After a resize: go back to the top of the area this run allocated, wipe
     /// it, and leave the cursor there so the rebuilt canvas takes the same rows
     /// instead of scrolling a second one into the terminal.
-    /// Transcribed from <c>engine/terminal.rs</c> 642-652.
     /// </summary>
     public void ResetCanvasArea(Stream output)
     {
@@ -1197,12 +1300,25 @@ public sealed class Terminal
 
     /// <summary>
     /// print_frame: move_cursor_to_top + output_string bytes + flush.
-    /// Transcribed from <c>engine/terminal.rs</c>.
     /// </summary>
     public void PrintFrame(Stream output, string outputString)
     {
-        WriteMoveCursorToTop(output);
-        output.Write(Encoding.UTF8.GetBytes(outputString));
+        PrintFrame(output, Encoding.UTF8.GetBytes(outputString));
+    }
+
+    /// <summary>print_frame over an already-encoded frame.</summary>
+    public void PrintFrame(Stream output, ReadOnlySpan<byte> frame)
+    {
+        // One write per frame: the cursor move and the frame go out together.
+        int length = _moveCursorToTop.Length + frame.Length;
+        if (_printBuffer.Length < length)
+        {
+            _printBuffer = new byte[Math.Max(length, _printBuffer.Length * 2)];
+        }
+
+        _moveCursorToTop.CopyTo(_printBuffer, 0);
+        frame.CopyTo(_printBuffer.AsSpan(_moveCursorToTop.Length));
+        output.Write(_printBuffer, 0, length);
         output.Flush();
     }
 

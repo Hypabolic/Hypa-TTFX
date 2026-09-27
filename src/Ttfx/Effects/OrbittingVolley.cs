@@ -8,7 +8,6 @@ namespace Ttfx.Effects;
 
 /// <summary>
 /// orbittingvolley, ported from effects/effect_orbittingvolley.py.
-/// Transcribed from <c>effects/orbittingvolley.rs</c>.
 /// </summary>
 public sealed class OrbittingVolleyConfig
 {
@@ -128,7 +127,7 @@ public sealed class OrbittingVolley : IEffect
             return null;
         }
 
-        // orbittingvolley.rs:138 — magazine.remove(0)
+        // take from the front of the magazine
         CharId nextChar = launcher.Magazine[0];
         launcher.Magazine.RemoveAt(0);
         Coord launcherCoord = world.Terminal.Arena[(int)launcher.Character.Value].Motion.CurrentCoord;
@@ -152,21 +151,18 @@ public sealed class OrbittingVolley : IEffect
         Coord childInputCoord = world.Terminal.Arena[(int)childChar.Value].InputCoord;
         if (childInputCoord.Equals(Coord.New(canvasRight, canvasTop)))
         {
-            // orbittingvolley.rs:158
             long childRow = canvasTop - PyCompat.TruncToI64(canvasTop * parentProgress);
             world.Terminal.Arena[(int)childChar.Value].Motion.SetCoordinate(
                 Coord.New(canvasRight, Math.Max(1, childRow)));
         }
         else if (childInputCoord.Equals(Coord.New(canvasRight, canvasBottom)))
         {
-            // orbittingvolley.rs:163
             long childColumn = canvasRight - PyCompat.TruncToI64(canvasRight * parentProgress);
             world.Terminal.Arena[(int)childChar.Value].Motion.SetCoordinate(
                 Coord.New(Math.Max(1, childColumn), canvasBottom));
         }
         else if (childInputCoord.Equals(Coord.New(canvasLeft, canvasBottom)))
         {
-            // orbittingvolley.rs:168
             long childRow = canvasBottom + PyCompat.TruncToI64(canvasTop * parentProgress);
             world.Terminal.Arena[(int)childChar.Value].Motion.SetCoordinate(
                 Coord.New(canvasLeft, Math.Min(canvasTop, childRow)));
@@ -362,7 +358,7 @@ public sealed class OrbittingVolley : IEffect
             {
                 for (int launcherIndex = 0; launcherIndex < _launchers.Count; launcherIndex++)
                 {
-                    // orbittingvolley.rs:368 — max(int((volley_size * len(input_characters)) / 4), 1)
+                    // max(int((volley_size * len(input_characters)) / 4), 1)
                     long charactersToLaunch = Math.Max(
                         1,
                         PyCompat.TruncToI64(

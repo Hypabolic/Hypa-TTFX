@@ -4,7 +4,7 @@ using Ttfx.Engine;
 namespace Ttfx.Utils;
 
 /// <summary>
-/// FIFO queue mirroring Rust <c>VecDeque</c> push_back / pop_front sites.
+/// FIFO queue: append to the back, take from the front.
 /// </summary>
 public sealed class Queue<T>
 {

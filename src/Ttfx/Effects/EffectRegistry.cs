@@ -14,7 +14,7 @@ public sealed record EffectSpec(
 /// <summary>
 /// Static name → option specs + factory. Enumeration order is observable:
 /// <c>--random-effect</c> selects by <c>ChoiceIndex(names.Count)</c>, so the
-/// list matches the reference EffectCommand order exactly.
+/// this list order is fixed.
 /// <c>--probe</c> is a root flag, not a registry entry.
 /// </summary>
 public static class EffectRegistry

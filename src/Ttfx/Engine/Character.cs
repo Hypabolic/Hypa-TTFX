@@ -5,7 +5,6 @@ namespace Ttfx.Engine;
 
 /// <summary>
 /// Arena slot index (dense). Never used for ordering.
-/// Transcribed from <c>engine/character.rs</c>.
 /// </summary>
 public readonly record struct CharId(uint Value);
 
@@ -51,7 +50,31 @@ public sealed class EffectCharacter
 
     public EventHandler EventHandler { get; } = new EventHandler();
 
-    public long Layer { get; set; }
+    public long Layer
+    {
+        get => _layer;
+        set
+        {
+            _layer = value;
+            if (_render is RenderState render)
+            {
+                render.Layers[_renderSlot] = value;
+            }
+        }
+    }
+
+    private long _layer;
+    private RenderState? _render;
+    private int _renderSlot;
+
+    /// <summary>Write coordinate, layer and visual through to <paramref name="render"/>.</summary>
+    internal void AttachRender(RenderState render, int slot)
+    {
+        _render = render;
+        _renderSlot = slot;
+        Motion.AttachRender(render, slot);
+        Animation.AttachRender(render, slot);
+    }
 
     public bool IsFillCharacter { get; set; }
 
@@ -77,6 +100,11 @@ public sealed class EffectCharacter
     }
 
     public EffectCharacter(uint characterId, string symbol, long inputColumn, long inputRow)
+        : this(characterId, symbol, inputColumn, inputRow, null)
+    {
+    }
+
+    internal EffectCharacter(uint characterId, string symbol, long inputColumn, long inputRow, VisualPool? pool)
     {
         CharacterId = characterId;
         InputSymbol = symbol;
@@ -84,7 +112,7 @@ public sealed class EffectCharacter
         InputAnsiFgSequence = null;
         InputAnsiBgSequence = null;
         IsVisible = false;
-        Animation = Animation.New(symbol);
+        Animation = Animation.New(symbol, pool);
         Motion = Motion.New(InputCoord);
         Layer = 0;
         IsFillCharacter = false;

@@ -7,7 +7,6 @@ namespace Ttfx.Tests;
 
 /// <summary>
 /// Four resize_settled suppression checks, individually.
-/// Transcribed contract from <c>terminal.rs</c> 622-640.
 /// </summary>
 internal static class SignalsResizeTests
 {

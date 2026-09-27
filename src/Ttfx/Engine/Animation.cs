@@ -25,9 +25,6 @@ public enum SyncMetric
 
 /// <summary>
 /// The precomputed ANSI string for one cell, stored as UTF-8 bytes.
-/// Representation half of Rust's inline/heap union is dropped;
-/// the cached byte[] is the semantic half.
-/// Transcribed from <c>engine/animation.rs</c>.
 /// </summary>
 public sealed class FormattedSymbol
 {
@@ -92,9 +89,15 @@ public sealed class CharacterVisual
     public Ansi.ColorCode? BgColorCode { get; }
     public FormattedSymbol FormattedSymbol { get; }
 
-    private static readonly StringBuilder FormatScratch = new StringBuilder();
+    [ThreadStatic]
+    private static StringBuilder? t_formatScratch;
 
     public CharacterVisual(string symbol, VisualParams p)
+        : this(symbol, p, t_formatScratch ??= new StringBuilder())
+    {
+    }
+
+    internal CharacterVisual(string symbol, VisualParams p, StringBuilder formatScratch)
     {
         Symbol = symbol;
         Bold = p.Bold;
@@ -110,9 +113,9 @@ public sealed class CharacterVisual
         BgColorCode = p.BgColorCode;
         // Effects rebuild visuals every frame, so the SGR string is assembled in
         // a reused scratch buffer rather than a fresh allocation per visual.
-        FormatScratch.Clear();
-        FormatSymbolInto(FormatScratch);
-        FormattedSymbol = FormattedSymbol.New(FormatScratch.ToString());
+        formatScratch.Clear();
+        FormatSymbolInto(formatScratch);
+        FormattedSymbol = FormattedSymbol.New(formatScratch.ToString());
     }
 
     public static CharacterVisual New(string symbol, VisualParams p) => new CharacterVisual(symbol, p);
@@ -171,11 +174,148 @@ public sealed class CharacterVisual
         }
 
         fmt.Append(Symbol);
-        // Rust str::len() is bytes. Compare UTF-8 byte counts, not String.Length.
+        // Compare UTF-8 byte counts, not String.Length.
         if (Encoding.UTF8.GetByteCount(fmt.ToString()) != Encoding.UTF8.GetByteCount(Symbol))
         {
             fmt.Append(Ansi.ResetAll);
         }
+    }
+}
+
+/// <summary>
+/// The visuals one run builds, deduplicated. Visuals are immutable, so frames
+/// and characters that look the same share one instance: it is formatted once,
+/// and the renderer can tell an unchanged cell by reference.
+/// Scene frames are pooled for the run; transient appearances
+/// (<see cref="Animation.SetAppearance"/>) go through a fixed-size memo
+/// instead, so effects that keep making new colors do not accumulate them.
+/// Owned by the <see cref="Terminal"/>, so it lives exactly as long as the run.
+/// </summary>
+internal sealed class VisualPool
+{
+    private const int AppearanceSlots = 4096;
+
+    private readonly Dictionary<VisualKey, CharacterVisual> _visuals = new Dictionary<VisualKey, CharacterVisual>();
+    private readonly (VisualKey Key, CharacterVisual? Visual)[] _appearances =
+        new (VisualKey, CharacterVisual?)[AppearanceSlots];
+    private readonly StringBuilder _formatScratch = new StringBuilder();
+
+    public int Count => _visuals.Count;
+
+    /// <summary>
+    /// The pooled visual for <paramref name="symbol"/> styled by
+    /// <paramref name="p"/>, whose color codes are resolved from its colors
+    /// (<see cref="Animation.ResolveColorCode"/>) only when it is first built.
+    /// </summary>
+    public CharacterVisual Intern(string symbol, VisualParams p, bool noColor, bool useXtermColors)
+    {
+        var key = new VisualKey(symbol, p, noColor, useXtermColors);
+        if (_visuals.TryGetValue(key, out CharacterVisual? visual))
+        {
+            return visual;
+        }
+
+        visual = Build(symbol, p, noColor, useXtermColors);
+        _visuals.Add(key, visual);
+        return visual;
+    }
+
+    /// <summary>
+    /// Like <see cref="Intern"/>, but a visual not already pooled is only
+    /// remembered in a direct-mapped memo slot, not kept for the run.
+    /// </summary>
+    public CharacterVisual Appearance(string symbol, VisualParams p, bool noColor, bool useXtermColors)
+    {
+        var key = new VisualKey(symbol, p, noColor, useXtermColors);
+        ref (VisualKey Key, CharacterVisual? Visual) slot =
+            ref _appearances[key.GetHashCode() & (AppearanceSlots - 1)];
+        if (slot.Visual is CharacterVisual memo && slot.Key.Equals(key))
+        {
+            return memo;
+        }
+
+        if (!_visuals.TryGetValue(key, out CharacterVisual? visual))
+        {
+            visual = Build(symbol, p, noColor, useXtermColors);
+        }
+
+        slot = (key, visual);
+        return visual;
+    }
+
+    private CharacterVisual Build(string symbol, VisualParams p, bool noColor, bool useXtermColors)
+    {
+        p.FgColorCode = Animation.ResolveColorCode(p.Colors?.FgColor, noColor, useXtermColors);
+        p.BgColorCode = Animation.ResolveColorCode(p.Colors?.BgColor, noColor, useXtermColors);
+        return new CharacterVisual(symbol, p, _formatScratch);
+    }
+
+    /// <summary>
+    /// Everything a visual is built from. Colors compare by
+    /// <see cref="Color.Equals(Color)"/> (their ColorArg), which also fixes the
+    /// color codes for a given no-color / xterm setting.
+    /// </summary>
+    private readonly struct VisualKey : IEquatable<VisualKey>
+    {
+        private readonly string _symbol;
+        private readonly Color? _fg;
+        private readonly Color? _bg;
+        private readonly int _flags;
+        private readonly int _hash;
+
+        public VisualKey(string symbol, VisualParams p, bool noColor, bool useXtermColors)
+        {
+            _symbol = symbol;
+            _fg = p.Colors?.FgColor;
+            _bg = p.Colors?.BgColor;
+            _flags = (p.Bold ? 1 : 0)
+                | (p.Dim ? 1 << 1 : 0)
+                | (p.Italic ? 1 << 2 : 0)
+                | (p.Underline ? 1 << 3 : 0)
+                | (p.Blink ? 1 << 4 : 0)
+                | (p.Reverse ? 1 << 5 : 0)
+                | (p.Hidden ? 1 << 6 : 0)
+                | (p.Strike ? 1 << 7 : 0)
+                | (p.Colors is not null ? 1 << 8 : 0)
+                | (noColor ? 1 << 9 : 0)
+                | (useXtermColors ? 1 << 10 : 0);
+            // Equal colors have equal RgbColor, so hashing it agrees with
+            // Color.Equals. The strings are a symbol and six hex digits: a
+            // plain multiplicative hash beats the randomized string hash here.
+            uint hash = (uint)_flags;
+            hash = Mix(hash, symbol);
+            hash = Mix(hash, _fg?.RgbColor);
+            hash = Mix(hash, _bg?.RgbColor);
+            _hash = (int)(hash ^ (hash >> 15));
+        }
+
+        private static uint Mix(uint hash, string? text)
+        {
+            if (text is null)
+            {
+                return hash * 0x9E3779B1u;
+            }
+
+            foreach (char c in text)
+            {
+                hash = (hash ^ c) * 0x01000193u;
+            }
+
+            return hash * 0x9E3779B1u + (uint)text.Length;
+        }
+
+        public bool Equals(VisualKey other) =>
+            _hash == other._hash
+            && _flags == other._flags
+            && string.Equals(_symbol, other._symbol, StringComparison.Ordinal)
+            && SameColor(_fg, other._fg)
+            && SameColor(_bg, other._bg);
+
+        private static bool SameColor(Color? a, Color? b) => a is null ? b is null : a.Equals(b);
+
+        public override bool Equals(object? obj) => obj is VisualKey other && Equals(other);
+
+        public override int GetHashCode() => _hash;
     }
 }
 
@@ -200,7 +340,6 @@ public sealed class Frame
 
 /// <summary>
 /// animation.Scene.
-/// Transcribed from <c>engine/animation.rs</c>.
 /// </summary>
 public sealed class Scene
 {
@@ -215,9 +354,9 @@ public sealed class Scene
     public List<Frame> AllFrames { get; } = new List<Frame>();
 
     /// <summary>
-    /// Remaining frame queue (indices into all_frames). FIFO: push_back / pop_front
-    /// (<c>animation.rs:226</c>). List so synced-scene indexing (<c>ctx.rs:613</c>)
-    /// and <c>.back()</c> (<c>ctx.rs:594</c>) work.
+    /// Remaining frame queue (indices into all_frames). FIFO: append at the back,
+    /// take from the front. A List so synced-scene indexing and last-frame
+    /// access work.
     /// </summary>
     public List<int> Frames { get; } = new List<int>();
 
@@ -234,6 +373,9 @@ public sealed class Scene
     public long EasingCurrentStep { get; set; }
     public ColorPair? PreexistingColors { get; set; }
     public bool PreexistingBold { get; set; }
+
+    /// <summary>The run's visual pool; null builds every frame's visual afresh.</summary>
+    internal VisualPool? Pool { get; set; }
 
     public Scene(
         string sceneId,
@@ -264,30 +406,7 @@ public sealed class Scene
     /// Scene._get_color_code. Upstream memoizes into a process-global ClassVar
     /// dict; the memo is value-transparent so we just recompute.
     /// </summary>
-    private Ansi.ColorCode? GetColorCode(Color? color)
-    {
-        if (color is null)
-        {
-            return null;
-        }
-
-        if (NoColor)
-        {
-            return null;
-        }
-
-        if (UseXtermColors)
-        {
-            if (color.XtermColor is byte code)
-            {
-                return new Ansi.ColorCode.Xterm(code);
-            }
-
-            return new Ansi.ColorCode.Xterm(Hexterm.HexToXterm(color.RgbColor));
-        }
-
-        return new Ansi.ColorCode.Rgb(color.RgbColor);
-    }
+    private Ansi.ColorCode? GetColorCode(Color? color) => Animation.ResolveColorCode(color, NoColor, UseXtermColors);
 
     /// <summary>Scene.add_frame with the preexisting-color/bold overrides.</summary>
     public void AddFrame(string symbol, long duration, VisualParams parameters)
@@ -302,23 +421,32 @@ public sealed class Scene
             parameters.Bold = true;
         }
 
-        if (parameters.Colors is ColorPair colors)
-        {
-            parameters.FgColorCode = GetColorCode(colors.FgColor);
-            parameters.BgColorCode = GetColorCode(colors.BgColor);
-        }
-        else
-        {
-            parameters.FgColorCode = null;
-            parameters.BgColorCode = null;
-        }
-
         if (duration < 1)
         {
             throw new EngineException($"Frame duration must be at least 1. Received: {duration}");
         }
 
-        CharacterVisual visual = CharacterVisual.New(symbol, parameters);
+        CharacterVisual visual;
+        if (Pool is VisualPool pool)
+        {
+            visual = pool.Intern(symbol, parameters, NoColor, UseXtermColors);
+        }
+        else
+        {
+            if (parameters.Colors is ColorPair colors)
+            {
+                parameters.FgColorCode = GetColorCode(colors.FgColor);
+                parameters.BgColorCode = GetColorCode(colors.BgColor);
+            }
+            else
+            {
+                parameters.FgColorCode = null;
+                parameters.BgColorCode = null;
+            }
+
+            visual = CharacterVisual.New(symbol, parameters);
+        }
+
         int frameIndex = AllFrames.Count;
         AllFrames.Add(new Frame(visual, duration));
         Frames.Add(frameIndex);
@@ -347,12 +475,13 @@ public sealed class Scene
     public CharacterVisual GetNextVisual()
     {
         int head = Frames[0];
-        CharacterVisual nextVisual = AllFrames[head].CharacterVisual;
-        AllFrames[head].TicksElapsed += 1;
-        if (AllFrames[head].TicksElapsed == AllFrames[head].Duration)
+        Frame frame = AllFrames[head];
+        CharacterVisual nextVisual = frame.CharacterVisual;
+        frame.TicksElapsed += 1;
+        if (frame.TicksElapsed == frame.Duration)
         {
-            AllFrames[head].TicksElapsed = 0;
-            PlayedFrames.Add(Frames[0]);
+            frame.TicksElapsed = 0;
+            PlayedFrames.Add(head);
             Frames.RemoveAt(0);
             if (IsLooping && Frames.Count == 0)
             {
@@ -382,7 +511,7 @@ public sealed class Scene
             int smallerIndex = 0;
             int currentRepeatFactor = 0;
             var output = new List<(T, R)>(larger.Count);
-            // Length captured once: cyclic_distribution does not emit (animation.rs:349).
+            // Length captured once: cyclic_distribution does not emit.
             int largerCount = larger.Count;
             for (int i = 0; i < largerCount; i++)
             {
@@ -430,7 +559,7 @@ public sealed class Scene
                 "Foreground and background gradient are empty. At least one gradient must have at least one color.");
         }
 
-        // Length captured once: symbol validation does not emit (animation.rs:382).
+        // Length captured once: symbol validation does not emit.
         int symbolCount = symbols.Count;
         for (int i = 0; i < symbolCount; i++)
         {
@@ -513,7 +642,7 @@ public sealed class Scene
         // already-played frames were zeroed when they retired.
         var remaining = new List<int>(Frames);
         Frames.Clear();
-        // Length captured once: reset does not emit (animation.rs:425).
+        // Length captured once: reset does not emit.
         int remainingCount = remaining.Count;
         for (int i = 0; i < remainingCount; i++)
         {
@@ -530,7 +659,6 @@ public sealed class Scene
 
 /// <summary>
 /// engine/animation.py Animation: per-character animation state.
-/// Transcribed from <c>engine/animation.rs</c>.
 /// </summary>
 public sealed class Animation
 {
@@ -543,10 +671,35 @@ public sealed class Animation
     public Color? InputBgColor { get; set; }
     public bool InputBold { get; set; }
     public long ActiveSceneCurrentStep { get; set; }
-    public CharacterVisual CurrentCharacterVisual { get; set; }
-
-    private Animation(string inputSymbol)
+    public CharacterVisual CurrentCharacterVisual
     {
+        get => _currentCharacterVisual;
+        set
+        {
+            _currentCharacterVisual = value;
+            if (_render is RenderState render)
+            {
+                render.Visuals[_renderSlot] = value;
+            }
+        }
+    }
+
+    private CharacterVisual _currentCharacterVisual = null!;
+    private RenderState? _render;
+    private int _renderSlot;
+
+    internal void AttachRender(RenderState render, int slot)
+    {
+        _render = render;
+        _renderSlot = slot;
+    }
+
+    /// <summary>The run's visual pool; null builds every visual afresh.</summary>
+    internal VisualPool? Pool { get; }
+
+    private Animation(string inputSymbol, VisualPool? pool)
+    {
+        Pool = pool;
         UseXtermColors = false;
         NoColor = false;
         ExistingColorHandling = ExistingColorHandling.Ignore;
@@ -554,10 +707,14 @@ public sealed class Animation
         InputBgColor = null;
         InputBold = false;
         ActiveSceneCurrentStep = 0;
-        CurrentCharacterVisual = CharacterVisual.Plain(inputSymbol);
+        CurrentCharacterVisual = pool is null
+            ? CharacterVisual.Plain(inputSymbol)
+            : pool.Intern(inputSymbol, new VisualParams(), false, false);
     }
 
-    public static Animation New(string inputSymbol) => new Animation(inputSymbol);
+    public static Animation New(string inputSymbol) => new Animation(inputSymbol, null);
+
+    internal static Animation New(string inputSymbol, VisualPool? pool) => new Animation(inputSymbol, pool);
 
     /// <summary>
     /// Animation.new_scene: auto-ids are stringified integers probing upward;
@@ -602,6 +759,7 @@ public sealed class Animation
         Scene scene = Scene.New(resolvedId, isLooping, sync, ease, NoColor, UseXtermColors);
         scene.PreexistingColors = preexistingColors;
         scene.PreexistingBold = preexistingBold;
+        scene.Pool = Pool;
         Scenes.Insert(resolvedId, scene);
         return resolvedId;
     }
@@ -619,19 +777,22 @@ public sealed class Animation
     }
 
     /// <summary>Animation._get_color_code.</summary>
-    public Ansi.ColorCode? GetColorCode(Color? color)
+    public Ansi.ColorCode? GetColorCode(Color? color) => ResolveColorCode(color, NoColor, UseXtermColors);
+
+    /// <summary>_get_color_code for either owner (Animation or Scene) of the settings.</summary>
+    internal static Ansi.ColorCode? ResolveColorCode(Color? color, bool noColor, bool useXtermColors)
     {
         if (color is null)
         {
             return null;
         }
 
-        if (NoColor)
+        if (noColor)
         {
             return null;
         }
 
-        if (UseXtermColors)
+        if (useXtermColors)
         {
             if (color.XtermColor is byte code)
             {
@@ -658,6 +819,16 @@ public sealed class Animation
         {
             resolvedColors = ColorPair.New(InputFgColor, InputBgColor);
             bold = InputBold;
+        }
+
+        if (Pool is VisualPool pool)
+        {
+            CurrentCharacterVisual = pool.Appearance(
+                resolvedSymbol,
+                new VisualParams { Bold = bold, Colors = resolvedColors },
+                NoColor,
+                UseXtermColors);
+            return;
         }
 
         Ansi.ColorCode? fgCode = GetColorCode(resolvedColors.FgColor);
