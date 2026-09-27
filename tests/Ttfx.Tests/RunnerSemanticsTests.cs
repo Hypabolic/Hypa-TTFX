@@ -23,6 +23,9 @@ internal static class RunnerSemanticsTests
         yield return new TestCase("max-frames past completion emits all", MaxFramesPastCompletionEmitsAll);
         yield return new TestCase("run_effect restores cursor on error", RestoreCursorOnError);
         yield return new TestCase("DEC save/restore are ESC plus digit", DecSaveRestoreBytes);
+        yield return new TestCase("tty run ends quietly when the terminal closes (EIO)", TtyOutputClosedEio);
+        yield return new TestCase("tty run ends quietly when the pipe closes (EPIPE)", TtyOutputClosedEpipe);
+        yield return new TestCase("redirected run still fails on EIO", RedirectedEioStillFails);
     }
 
     private static void VirtualClockDt()
@@ -79,6 +82,30 @@ internal static class RunnerSemanticsTests
             Harness.AssertTrue("showed cursor", text.Contains(Ansi.ShowCursor, StringComparison.Ordinal));
             Harness.AssertTrue("eol", text.EndsWith('\n'));
         }
+    }
+
+    private static void TtyOutputClosedEio()
+    {
+        var stdout = new ClosingStream(() => new OutputWriteException(StdIo.Eio));
+        RunOutcome outcome = EffectRunner.RunEffect(new ClosingEffect(stdout), MakeWorld(), stdout, ttyOutput: true);
+        Harness.AssertEqual("outcome", RunOutcome.OutputClosed, outcome);
+        Harness.AssertEqual("no teardown writes after the close", 1, stdout.WritesAfterClose);
+    }
+
+    private static void TtyOutputClosedEpipe()
+    {
+        var stdout = new ClosingStream(() => new BrokenPipeException());
+        RunOutcome outcome = EffectRunner.RunEffect(new ClosingEffect(stdout), MakeWorld(), stdout, ttyOutput: true);
+        Harness.AssertEqual("outcome", RunOutcome.OutputClosed, outcome);
+        Harness.AssertEqual("no teardown writes after the close", 1, stdout.WritesAfterClose);
+    }
+
+    private static void RedirectedEioStillFails()
+    {
+        var stdout = new ClosingStream(() => new OutputWriteException(StdIo.Eio));
+        Harness.AssertThrows<OutputWriteException>(
+            "EIO to a redirected stream is a real failure",
+            () => EffectRunner.RunEffect(new ClosingEffect(stdout), MakeWorld(), stdout, ttyOutput: false));
     }
 
     private static void DecSaveRestoreBytes()
@@ -152,6 +179,84 @@ internal static class RunnerSemanticsTests
             }
 
             _n += 1;
+            return "f";
+        }
+
+        public void DispatchCallback(EngineWorld world, CharId character, EffectCallback callback)
+        {
+        }
+    }
+
+    /// <summary>Accepts writes until <see cref="Closed"/>, then fails every one.</summary>
+    private sealed class ClosingStream : Stream
+    {
+        private readonly Func<IOException> _failure;
+
+        public ClosingStream(Func<IOException> failure)
+        {
+            _failure = failure;
+        }
+
+        public bool Closed { get; set; }
+
+        public int WritesAfterClose { get; private set; }
+
+        public override bool CanRead => false;
+        public override bool CanSeek => false;
+        public override bool CanWrite => true;
+        public override long Length => throw new NotSupportedException();
+
+        public override long Position
+        {
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
+        }
+
+        public override void Flush()
+        {
+        }
+
+        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+
+        public override void SetLength(long value) => throw new NotSupportedException();
+
+        public override void Write(byte[] buffer, int offset, int count) => Write(buffer.AsSpan(offset, count));
+
+        public override void Write(ReadOnlySpan<byte> buffer)
+        {
+            if (Closed)
+            {
+                WritesAfterClose += 1;
+                throw _failure();
+            }
+        }
+    }
+
+    /// <summary>Emits frames forever; closes the output before its second frame.</summary>
+    private sealed class ClosingEffect : IEffect
+    {
+        private readonly ClosingStream _stdout;
+        private int _n;
+
+        public ClosingEffect(ClosingStream stdout)
+        {
+            _stdout = stdout;
+        }
+
+        public void Build(EngineWorld world)
+        {
+        }
+
+        public string? NextFrame(EngineWorld world)
+        {
+            _n += 1;
+            if (_n == 2)
+            {
+                _stdout.Closed = true;
+            }
+
             return "f";
         }
 

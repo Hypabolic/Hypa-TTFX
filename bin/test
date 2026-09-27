@@ -223,6 +223,13 @@ dotnet run --project tests/Ttfx.Tests -c Release --no-launch-profile
 
 python3 "$ROOT/tools/tests/sigterm_behavior.py" "$ROOT/artifacts/ttfx"
 python3 "$ROOT/tools/tests/sigint_behavior.py" "$ROOT/artifacts/ttfx"
+# A write to a pty whose master has closed fails with EIO on Linux; that is the
+# path verified here. Darwin's pty teardown has not been checked yet.
+if [ "$(uname -s)" = "Linux" ]; then
+  python3 "$ROOT/tools/tests/terminal_close_behavior.py" "$ROOT/artifacts/ttfx"
+else
+  echo "bin/test: skipping terminal_close_behavior.py off Linux" >&2
+fi
 # GitHub's macos-26-arm64 image does not deliver SIGWINCH from TIOCSWINSZ on a
 # Python pty, and unthrottled AOT wipe finishes before the script's 300ms
 # resize. Linux CI is the resize gate; keep the script for local Darwin.
