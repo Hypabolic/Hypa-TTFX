@@ -18,10 +18,23 @@ public sealed class BrokenPipeException : IOException
     }
 }
 
+/// <summary>A write(2) failed with <see cref="Errno"/> (other than EPIPE).</summary>
+public sealed class OutputWriteException : IOException
+{
+    public OutputWriteException(int errno)
+        : base($"write failed: errno {errno}")
+    {
+        Errno = errno;
+    }
+
+    public int Errno { get; }
+}
+
 /// <summary>Raw stdout via write(2).</summary>
 public static partial class StdIo
 {
     public const int StdoutFd = 1;
+    public const int Eio = 5;
     public const int Epipe = 32;
 
     public static Stream OpenStdout() => new PosixFdStream(StdoutFd);
@@ -47,7 +60,7 @@ public static partial class StdIo
                     throw new BrokenPipeException();
                 }
 
-                throw new IOException($"write failed: errno {err}");
+                throw new OutputWriteException(err);
             }
 
             if (written == 0)

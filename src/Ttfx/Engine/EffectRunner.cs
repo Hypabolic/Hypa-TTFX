@@ -15,6 +15,9 @@ public enum RunOutcome
     Interrupted,
     Terminated,
     TerminalResized,
+
+    /// <summary>The terminal went away mid-run; there was nothing left to draw on.</summary>
+    OutputClosed,
 }
 
 /// <summary>
@@ -79,31 +82,43 @@ public static class EffectRunner
     /// always restore the cursor (even on error — RAII would not run on a raw
     /// process exit, so this is explicit).
     ///
-    /// With <paramref name="stopOnResize"/>, a settled terminal resize also ends
+    /// With <paramref name="ttyOutput"/>, a settled terminal resize also ends
     /// the pass, wiped and parked at the top of the area so the caller can
-    /// rebuild in place.
+    /// rebuild in place, and a terminal that goes away ends the run
+    /// (<see cref="RunOutcome.OutputClosed"/>). A redirected stream gets
+    /// neither: SIGWINCH there is not about our output, and a write that fails
+    /// to a file is a real failure.
     /// </summary>
-    public static RunOutcome RunEffect(IEffect effect, EngineWorld world, bool stopOnResize = false)
+    public static RunOutcome RunEffect(IEffect effect, EngineWorld world, bool ttyOutput = false)
     {
         using Stream stdout = StdIo.OpenStdout();
-        return RunEffect(effect, world, stdout, stopOnResize);
+        return RunEffect(effect, world, stdout, ttyOutput);
     }
 
     internal static RunOutcome RunEffect(
         IEffect effect,
         EngineWorld world,
         Stream stdout,
-        bool stopOnResize = false)
+        bool ttyOutput = false)
     {
         world.FrameTextDeferred = true;
         effect.Build(world);
-        world.Terminal.PrepCanvas(stdout);
+        try
+        {
+            world.Terminal.PrepCanvas(stdout);
+        }
+        catch (IOException ex) when (ttyOutput && IsOutputClosed(ex))
+        {
+            return RunOutcome.OutputClosed;
+        }
+
         RunOutcome outcome = RunOutcome.Complete;
+        bool outputClosed = false;
         try
         {
             while (true)
             {
-                if (RequestedStop(world, stopOnResize) is RunOutcome stop)
+                if (RequestedStop(world, ttyOutput) is RunOutcome stop)
                 {
                     outcome = stop;
                     break;
@@ -115,7 +130,7 @@ public static class EffectRunner
                     break;
                 }
 
-                if (RequestedStop(world, stopOnResize) is RunOutcome stopAfter)
+                if (RequestedStop(world, ttyOutput) is RunOutcome stopAfter)
                 {
                     outcome = stopAfter;
                     break;
@@ -124,33 +139,59 @@ public static class EffectRunner
                 world.Terminal.PrintFrame(stdout, world.FrameBytes(frame).Span);
             }
         }
+        catch (IOException ex) when (ttyOutput && IsOutputClosed(ex))
+        {
+            outputClosed = true;
+        }
         finally
         {
-            if (outcome == RunOutcome.TerminalResized)
+            // Every write after the terminal is gone fails, and there is no
+            // cursor left to restore, so a closed output skips the teardown.
+            if (!outputClosed)
             {
-                // Leave the cursor hidden and parked at the top of the wiped area: the
-                // rebuild redraws in place, and showing the cursor here would strobe it
-                // dozens of times a second through a window drag.
-                world.Terminal.ResetCanvasArea(stdout);
-            }
-            else
-            {
-                world.Terminal.RestoreCursor(stdout, "\n");
-            }
+                try
+                {
+                    if (outcome == RunOutcome.TerminalResized)
+                    {
+                        // Leave the cursor hidden and parked at the top of the wiped area: the
+                        // rebuild redraws in place, and showing the cursor here would strobe it
+                        // dozens of times a second through a window drag.
+                        world.Terminal.ResetCanvasArea(stdout);
+                    }
+                    else
+                    {
+                        world.Terminal.RestoreCursor(stdout, "\n");
+                    }
 
-            try
-            {
-                stdout.Flush();
-            }
-            catch (BrokenPipeException)
-            {
+                    try
+                    {
+                        stdout.Flush();
+                    }
+                    catch (BrokenPipeException)
+                    {
+                    }
+                }
+                catch (IOException ex) when (ttyOutput && IsOutputClosed(ex))
+                {
+                    outputClosed = true;
+                }
             }
         }
 
-        return outcome;
+        return outputClosed ? RunOutcome.OutputClosed : outcome;
     }
 
-    private static RunOutcome? RequestedStop(EngineWorld world, bool stopOnResize)
+    /// <summary>
+    /// Whether a failed write means the terminal is gone: the screensaver's
+    /// window was killed at lock, the emulator exited, a reader closed the
+    /// pipe. EIO is the pty slave outliving its master; EPIPE is the reader
+    /// of a pipe going away. Neither is a failure of the run, and there is
+    /// no one left to report it to.
+    /// </summary>
+    internal static bool IsOutputClosed(IOException ex) =>
+        ex is BrokenPipeException or OutputWriteException { Errno: StdIo.Eio };
+
+    private static RunOutcome? RequestedStop(EngineWorld world, bool ttyOutput)
     {
         if (Signals.Interrupted())
         {
@@ -162,7 +203,7 @@ public static class EffectRunner
             return RunOutcome.Terminated;
         }
 
-        if (stopOnResize && world.Terminal.ResizeSettled())
+        if (ttyOutput && world.Terminal.ResizeSettled())
         {
             return RunOutcome.TerminalResized;
         }

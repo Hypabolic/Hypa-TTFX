@@ -97,24 +97,24 @@ internal static class Program
         {
             if (root.InputFile is not null)
             {
-                Console.WriteLine($"Error reading input file: {ex.Message}");
+                Report(Console.Out, $"Error reading input file: {ex.Message}");
             }
             else
             {
-                Console.WriteLine($"Error decoding input: {ex.Message}");
+                Report(Console.Out, $"Error decoding input: {ex.Message}");
             }
 
             return 1;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
         {
-            Console.WriteLine($"Error reading input file: {ex.Message}");
+            Report(Console.Out, $"Error reading input file: {ex.Message}");
             return 1;
         }
 
         if (inputData.Trim().Length == 0)
         {
-            Console.WriteLine("NO INPUT.");
+            Report(Console.Out, "NO INPUT.");
             return 1;
         }
 
@@ -132,7 +132,7 @@ internal static class Program
             }
             catch (IOException ex)
             {
-                Console.Error.WriteLine($"Error: {ex.Message}");
+                Report(Console.Error, $"Error: {ex.Message}");
                 return 1;
             }
         }
@@ -141,13 +141,13 @@ internal static class Program
         {
             if (FilteredEffectNames(root).Count == 0)
             {
-                Console.Error.WriteLine("Error: No effects available after filtering.");
+                Report(Console.Error, "Error: No effects available after filtering.");
                 return 1;
             }
         }
         else if (parsed.EffectName is null)
         {
-            Console.Error.WriteLine("Error: No effect specified.");
+            Report(Console.Error, "Error: No effect specified.");
             return 1;
         }
 
@@ -159,12 +159,12 @@ internal static class Program
         }
         catch (UnsupportedAnsiException ex)
         {
-            Console.Error.WriteLine($"Error: Unsupported ANSI sequence in input data: {ex.Sequence}");
+            Report(Console.Error, $"Error: Unsupported ANSI sequence in input data: {ex.Sequence}");
             return 1;
         }
         catch (EngineException ex)
         {
-            Console.Error.WriteLine($"Error: {ex.Message}");
+            Report(Console.Error, $"Error: {ex.Message}");
             return 1;
         }
 
@@ -180,7 +180,7 @@ internal static class Program
             spec = EffectRegistry.Find(name)!;
             if (spec.Factory is null)
             {
-                Console.Error.WriteLine($"Error: failed to build effect '{name}'.");
+                Report(Console.Error, $"Error: failed to build effect '{name}'.");
                 return 1;
             }
 
@@ -191,7 +191,7 @@ internal static class Program
             spec = EffectRegistry.Find(parsed.EffectName!)!;
             if (spec.Factory is null)
             {
-                Console.Error.WriteLine($"Error: failed to build effect '{parsed.EffectName}'.");
+                Report(Console.Error, $"Error: failed to build effect '{parsed.EffectName}'.");
                 return 1;
             }
 
@@ -297,17 +297,17 @@ internal static class Program
         }
         catch (IOException ex)
         {
-            Console.Error.WriteLine($"Error: {ex.Message}");
+            Report(Console.Error, $"Error: {ex.Message}");
             return 1;
         }
         catch (UnsupportedAnsiException ex)
         {
-            Console.Error.WriteLine($"Error: Unsupported ANSI sequence in input data: {ex.Sequence}");
+            Report(Console.Error, $"Error: Unsupported ANSI sequence in input data: {ex.Sequence}");
             return 1;
         }
         catch (EngineException ex)
         {
-            Console.Error.WriteLine($"Error: {ex.Message}");
+            Report(Console.Error, $"Error: {ex.Message}");
             return 1;
         }
 
@@ -325,6 +325,22 @@ internal static class Program
     }
 
     /// <summary>
+    /// Print a message, even when the stream behind it is gone: a failed
+    /// write here must not turn an error exit into an unhandled exception
+    /// (and so an abort), since there is no one left to tell anyway.
+    /// </summary>
+    private static void Report(TextWriter writer, string message)
+    {
+        try
+        {
+            writer.WriteLine(message);
+        }
+        catch (IOException)
+        {
+        }
+    }
+
+    /// <summary>
     /// M0 parity path: build the Terminal, make every character in
     /// character_by_input_coord visible, print the first frame to stdout.
     /// </summary>
@@ -337,12 +353,12 @@ internal static class Program
         }
         catch (UnsupportedAnsiException ex)
         {
-            Console.Error.WriteLine($"Error: Unsupported ANSI sequence in input data: {ex.Sequence}");
+            Report(Console.Error, $"Error: Unsupported ANSI sequence in input data: {ex.Sequence}");
             return 1;
         }
         catch (EngineException ex)
         {
-            Console.Error.WriteLine($"Error: {ex.Message}");
+            Report(Console.Error, $"Error: {ex.Message}");
             return 1;
         }
 
