@@ -203,7 +203,28 @@ public sealed class Motion
 {
     public OrderedMap<Path> Paths { get; } = new OrderedMap<Path>();
 
-    public Coord CurrentCoord { get; set; }
+    public Coord CurrentCoord
+    {
+        get => _currentCoord;
+        set
+        {
+            _currentCoord = value;
+            if (_render is RenderState render)
+            {
+                render.Coords[_renderSlot] = value;
+            }
+        }
+    }
+
+    private Coord _currentCoord;
+    private RenderState? _render;
+    private int _renderSlot;
+
+    internal void AttachRender(RenderState render, int slot)
+    {
+        _render = render;
+        _renderSlot = slot;
+    }
 
     public Coord PreviousCoord { get; set; }
 

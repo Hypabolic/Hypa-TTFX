@@ -51,7 +51,31 @@ public sealed class EffectCharacter
 
     public EventHandler EventHandler { get; } = new EventHandler();
 
-    public long Layer { get; set; }
+    public long Layer
+    {
+        get => _layer;
+        set
+        {
+            _layer = value;
+            if (_render is RenderState render)
+            {
+                render.Layers[_renderSlot] = value;
+            }
+        }
+    }
+
+    private long _layer;
+    private RenderState? _render;
+    private int _renderSlot;
+
+    /// <summary>Write coordinate, layer and visual through to <paramref name="render"/>.</summary>
+    internal void AttachRender(RenderState render, int slot)
+    {
+        _render = render;
+        _renderSlot = slot;
+        Motion.AttachRender(render, slot);
+        Animation.AttachRender(render, slot);
+    }
 
     public bool IsFillCharacter { get; set; }
 

@@ -150,6 +150,7 @@ public sealed class Terminal
 
     private readonly List<CharId> _visibleCharacters = new List<CharId>();
     private readonly List<int> _visiblePositions;
+    private readonly RenderState _render = new RenderState();
     private uint[] _renderCells = [];
     /// <summary>
     /// Winner visual per cell, filled alongside <see cref="_renderCells"/> so the
@@ -189,6 +190,11 @@ public sealed class Terminal
     {
         Config = config;
         Pool = pool;
+        for (int slot = 0; slot < arena.Count; slot++)
+        {
+            _render.Attach(arena[slot], slot);
+        }
+
         Canvas = canvas;
         Arena = arena;
         NextCharacterId = nextCharacterId;
@@ -322,6 +328,7 @@ public sealed class Terminal
                     NextCharacterId += 1;
                     var id = new CharId((uint)Arena.Count);
                     Arena.Add(fill);
+                    _render.Attach(fill, (int)id.Value);
                     CharacterByInputCoord[coord] = id;
                     if (Canvas.TextLeft <= column
                         && column <= Canvas.TextRight
@@ -426,7 +433,10 @@ public sealed class Terminal
         Array.Clear(_renderVisuals);
         uint[] cells = _renderCells;
         CharacterVisual?[] visuals = _renderVisuals;
-        List<EffectCharacter> arena = Arena;
+        Coord[] coords = _render.Coords;
+        long[] layers = _render.Layers;
+        uint[] characterIds = _render.CharacterIds;
+        CharacterVisual?[] characterVisuals = _render.Visuals;
 
         // The old implementation sorted every visible character by painter
         // order and overwrote cells in that order.  A cell only needs the
@@ -441,9 +451,8 @@ public sealed class Terminal
         int visibleCount = _visibleCharacters.Count;
         for (int i = 0; i < visibleCount; i++)
         {
-            CharId id = _visibleCharacters[i];
-            EffectCharacter ch = arena[(int)id.Value];
-            Coord coord = ch.Motion.CurrentCoord;
+            uint slot = _visibleCharacters[i].Value;
+            Coord coord = coords[slot];
             long row = coord.Row + rowOffset;
             long column = coord.Column + columnOffset;
             if (visibleBottom <= row
@@ -460,15 +469,16 @@ public sealed class Terminal
                 }
                 else
                 {
-                    EffectCharacter painted = arena[(int)cell];
-                    wins = ch.Layer > painted.Layer
-                        || (ch.Layer == painted.Layer && ch.CharacterId > painted.CharacterId);
+                    long layer = layers[slot];
+                    long paintedLayer = layers[cell];
+                    wins = layer > paintedLayer
+                        || (layer == paintedLayer && characterIds[slot] > characterIds[cell]);
                 }
 
                 if (wins)
                 {
-                    cells[cellIndex] = id.Value;
-                    visuals[cellIndex] = ch.Animation.CurrentCharacterVisual;
+                    cells[cellIndex] = slot;
+                    visuals[cellIndex] = characterVisuals[slot];
                 }
             }
         }
@@ -844,6 +854,7 @@ public sealed class Terminal
         NextCharacterId += 1;
         var id = new CharId((uint)Arena.Count);
         Arena.Add(ch);
+        _render.Attach(ch, (int)id.Value);
         AddedCharacters.Add(id);
         return id;
     }

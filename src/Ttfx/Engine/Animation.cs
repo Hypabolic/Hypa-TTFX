@@ -590,7 +590,28 @@ public sealed class Animation
     public Color? InputBgColor { get; set; }
     public bool InputBold { get; set; }
     public long ActiveSceneCurrentStep { get; set; }
-    public CharacterVisual CurrentCharacterVisual { get; set; }
+    public CharacterVisual CurrentCharacterVisual
+    {
+        get => _currentCharacterVisual;
+        set
+        {
+            _currentCharacterVisual = value;
+            if (_render is RenderState render)
+            {
+                render.Visuals[_renderSlot] = value;
+            }
+        }
+    }
+
+    private CharacterVisual _currentCharacterVisual = null!;
+    private RenderState? _render;
+    private int _renderSlot;
+
+    internal void AttachRender(RenderState render, int slot)
+    {
+        _render = render;
+        _renderSlot = slot;
+    }
 
     /// <summary>The run's visual pool; null builds every visual afresh.</summary>
     internal VisualPool? Pool { get; }
