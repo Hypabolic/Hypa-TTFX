@@ -77,6 +77,11 @@ public sealed class EffectCharacter
     }
 
     public EffectCharacter(uint characterId, string symbol, long inputColumn, long inputRow)
+        : this(characterId, symbol, inputColumn, inputRow, null)
+    {
+    }
+
+    internal EffectCharacter(uint characterId, string symbol, long inputColumn, long inputRow, VisualPool? pool)
     {
         CharacterId = characterId;
         InputSymbol = symbol;
@@ -84,7 +89,7 @@ public sealed class EffectCharacter
         InputAnsiFgSequence = null;
         InputAnsiBgSequence = null;
         IsVisible = false;
-        Animation = Animation.New(symbol);
+        Animation = Animation.New(symbol, pool);
         Motion = Motion.New(InputCoord);
         Layer = 0;
         IsFillCharacter = false;

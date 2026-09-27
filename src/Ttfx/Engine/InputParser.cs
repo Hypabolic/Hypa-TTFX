@@ -66,6 +66,9 @@ public sealed class Preprocessor
     public ColorFrequency InputColorsFrequency { get; }
     public TerminalConfig Config { get; }
 
+    /// <summary>The run's visual pool, handed to every character built.</summary>
+    internal VisualPool? Pool { get; init; }
+
     public Preprocessor(
         List<EffectCharacter> arena,
         uint nextCharacterId,
@@ -240,7 +243,7 @@ public sealed class Preprocessor
     /// </summary>
     private CharId BuildCharacter(string symbol, ActiveState state)
     {
-        var ch = new EffectCharacter(NextCharacterId, symbol, 0, 0);
+        var ch = new EffectCharacter(NextCharacterId, symbol, 0, 0, Pool);
         NextCharacterId += 1;
         // fg first, then bg — upstream dict iteration order over active_sequences
         if (state.FgSequence.Length != 0)

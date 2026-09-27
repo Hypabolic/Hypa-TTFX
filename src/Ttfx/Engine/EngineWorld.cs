@@ -771,18 +771,25 @@ public sealed class EngineWorld
     /// </summary>
     public void Update(IEffectHooks hooks)
     {
-        // Snapshot taken before the walk (ctx.rs:682-687).
-        CharId[] snapshot = ActiveCharacters.Snapshot();
+        // Snapshot taken before the walk (ctx.rs:682-687), into a buffer
+        // reused across frames. A reentrant Update from a callback takes a
+        // fresh one rather than overwrite the walk in progress.
+        List<CharId> snapshot = _updateScratch ?? new List<CharId>();
+        _updateScratch = null;
+        ActiveCharacters.SnapshotInto(snapshot);
         // Length captured once: snapshot walk (ctx.rs:685).
-        int count = snapshot.Length;
+        int count = snapshot.Count;
         for (int i = 0; i < count; i++)
         {
             Tick(hooks, snapshot[i]);
         }
 
-        List<EffectCharacter> arena = Terminal.Arena;
-        ActiveCharacters.Retain(id => arena[(int)id.Value].IsActive());
+        snapshot.Clear();
+        _updateScratch = snapshot;
+        ActiveCharacters.RetainActive(Terminal.Arena);
     }
+
+    private List<CharId>? _updateScratch = new List<CharId>();
 
     /// <summary>
     /// BaseEffectIterator.frame: enforce framerate (real clock only), then the
@@ -796,6 +803,31 @@ public sealed class EngineWorld
         }
 
         Clock.AdvanceFrame();
-        return Encoding.UTF8.GetString(Terminal.GetFormattedOutputString().Span);
+        ReadOnlyMemory<byte> frame = Terminal.GetFormattedOutputString();
+        return FrameTextDeferred ? RenderedFrame : Encoding.UTF8.GetString(frame.Span);
+    }
+
+    /// <summary>
+    /// Returned by <see cref="Frame"/> in place of the frame text while
+    /// <see cref="FrameTextDeferred"/> is set: the frame is in
+    /// <see cref="Terminal.LastFrame"/>. Compared by reference only.
+    /// </summary>
+    internal static readonly string RenderedFrame = new string('\0', 1);
+
+    /// <summary>
+    /// Set by runners that write frames as bytes, so <see cref="Frame"/> skips
+    /// decoding each frame into a string only to encode it again.
+    /// </summary>
+    internal bool FrameTextDeferred { get; set; }
+
+    /// <summary>
+    /// The bytes of a frame an effect returned: the terminal's buffer for
+    /// <see cref="RenderedFrame"/>, else the effect's own text encoded.
+    /// </summary>
+    internal ReadOnlyMemory<byte> FrameBytes(string frame)
+    {
+        return ReferenceEquals(frame, RenderedFrame)
+            ? Terminal.LastFrame
+            : Encoding.UTF8.GetBytes(frame);
     }
 }

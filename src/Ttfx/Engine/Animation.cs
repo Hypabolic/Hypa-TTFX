@@ -92,9 +92,15 @@ public sealed class CharacterVisual
     public Ansi.ColorCode? BgColorCode { get; }
     public FormattedSymbol FormattedSymbol { get; }
 
-    private static readonly StringBuilder FormatScratch = new StringBuilder();
+    [ThreadStatic]
+    private static StringBuilder? t_formatScratch;
 
     public CharacterVisual(string symbol, VisualParams p)
+        : this(symbol, p, t_formatScratch ??= new StringBuilder())
+    {
+    }
+
+    internal CharacterVisual(string symbol, VisualParams p, StringBuilder formatScratch)
     {
         Symbol = symbol;
         Bold = p.Bold;
@@ -110,9 +116,9 @@ public sealed class CharacterVisual
         BgColorCode = p.BgColorCode;
         // Effects rebuild visuals every frame, so the SGR string is assembled in
         // a reused scratch buffer rather than a fresh allocation per visual.
-        FormatScratch.Clear();
-        FormatSymbolInto(FormatScratch);
-        FormattedSymbol = FormattedSymbol.New(FormatScratch.ToString());
+        formatScratch.Clear();
+        FormatSymbolInto(formatScratch);
+        FormattedSymbol = FormattedSymbol.New(formatScratch.ToString());
     }
 
     public static CharacterVisual New(string symbol, VisualParams p) => new CharacterVisual(symbol, p);
@@ -180,6 +186,58 @@ public sealed class CharacterVisual
 }
 
 /// <summary>
+/// Every visual one run has built, deduplicated. Visuals are immutable, so
+/// characters and frames that look the same share one instance: it is
+/// formatted once, and the renderer can tell an unchanged cell by reference.
+/// Owned by the <see cref="Terminal"/>, so it lives exactly as long as the run.
+/// </summary>
+internal sealed class VisualPool
+{
+    private readonly Dictionary<VisualKey, CharacterVisual> _visuals = new Dictionary<VisualKey, CharacterVisual>();
+    private readonly StringBuilder _formatScratch = new StringBuilder();
+
+    public int Count => _visuals.Count;
+
+    /// <summary>
+    /// The pooled visual for <paramref name="symbol"/> styled by
+    /// <paramref name="p"/>, whose color codes are resolved from its colors
+    /// (<see cref="Animation.ResolveColorCode"/>) only when it is first built.
+    /// </summary>
+    public CharacterVisual Intern(string symbol, VisualParams p, bool noColor, bool useXtermColors)
+    {
+        int flags = (p.Bold ? 1 : 0)
+            | (p.Dim ? 1 << 1 : 0)
+            | (p.Italic ? 1 << 2 : 0)
+            | (p.Underline ? 1 << 3 : 0)
+            | (p.Blink ? 1 << 4 : 0)
+            | (p.Reverse ? 1 << 5 : 0)
+            | (p.Hidden ? 1 << 6 : 0)
+            | (p.Strike ? 1 << 7 : 0)
+            | (p.Colors is not null ? 1 << 8 : 0)
+            | (noColor ? 1 << 9 : 0)
+            | (useXtermColors ? 1 << 10 : 0);
+        var key = new VisualKey(symbol, p.Colors?.FgColor, p.Colors?.BgColor, flags);
+        if (_visuals.TryGetValue(key, out CharacterVisual? visual))
+        {
+            return visual;
+        }
+
+        p.FgColorCode = Animation.ResolveColorCode(p.Colors?.FgColor, noColor, useXtermColors);
+        p.BgColorCode = Animation.ResolveColorCode(p.Colors?.BgColor, noColor, useXtermColors);
+        visual = new CharacterVisual(symbol, p, _formatScratch);
+        _visuals.Add(key, visual);
+        return visual;
+    }
+
+    /// <summary>
+    /// Everything a visual is built from. Colors compare by
+    /// <see cref="Color.Equals(Color)"/> (their ColorArg), which also fixes the
+    /// color codes for a given no-color / xterm setting.
+    /// </summary>
+    private readonly record struct VisualKey(string Symbol, Color? Fg, Color? Bg, int Flags);
+}
+
+/// <summary>
 /// animation.Frame. Frames live in Scene.all_frames (stable storage);
 /// Scene.frames / Scene.played_frames hold indices into it, preserving the
 /// upstream object-identity semantics of frame_index_map.
@@ -235,6 +293,9 @@ public sealed class Scene
     public ColorPair? PreexistingColors { get; set; }
     public bool PreexistingBold { get; set; }
 
+    /// <summary>The run's visual pool; null builds every frame's visual afresh.</summary>
+    internal VisualPool? Pool { get; set; }
+
     public Scene(
         string sceneId,
         bool isLooping,
@@ -264,30 +325,7 @@ public sealed class Scene
     /// Scene._get_color_code. Upstream memoizes into a process-global ClassVar
     /// dict; the memo is value-transparent so we just recompute.
     /// </summary>
-    private Ansi.ColorCode? GetColorCode(Color? color)
-    {
-        if (color is null)
-        {
-            return null;
-        }
-
-        if (NoColor)
-        {
-            return null;
-        }
-
-        if (UseXtermColors)
-        {
-            if (color.XtermColor is byte code)
-            {
-                return new Ansi.ColorCode.Xterm(code);
-            }
-
-            return new Ansi.ColorCode.Xterm(Hexterm.HexToXterm(color.RgbColor));
-        }
-
-        return new Ansi.ColorCode.Rgb(color.RgbColor);
-    }
+    private Ansi.ColorCode? GetColorCode(Color? color) => Animation.ResolveColorCode(color, NoColor, UseXtermColors);
 
     /// <summary>Scene.add_frame with the preexisting-color/bold overrides.</summary>
     public void AddFrame(string symbol, long duration, VisualParams parameters)
@@ -302,23 +340,32 @@ public sealed class Scene
             parameters.Bold = true;
         }
 
-        if (parameters.Colors is ColorPair colors)
-        {
-            parameters.FgColorCode = GetColorCode(colors.FgColor);
-            parameters.BgColorCode = GetColorCode(colors.BgColor);
-        }
-        else
-        {
-            parameters.FgColorCode = null;
-            parameters.BgColorCode = null;
-        }
-
         if (duration < 1)
         {
             throw new EngineException($"Frame duration must be at least 1. Received: {duration}");
         }
 
-        CharacterVisual visual = CharacterVisual.New(symbol, parameters);
+        CharacterVisual visual;
+        if (Pool is VisualPool pool)
+        {
+            visual = pool.Intern(symbol, parameters, NoColor, UseXtermColors);
+        }
+        else
+        {
+            if (parameters.Colors is ColorPair colors)
+            {
+                parameters.FgColorCode = GetColorCode(colors.FgColor);
+                parameters.BgColorCode = GetColorCode(colors.BgColor);
+            }
+            else
+            {
+                parameters.FgColorCode = null;
+                parameters.BgColorCode = null;
+            }
+
+            visual = CharacterVisual.New(symbol, parameters);
+        }
+
         int frameIndex = AllFrames.Count;
         AllFrames.Add(new Frame(visual, duration));
         Frames.Add(frameIndex);
@@ -545,8 +592,12 @@ public sealed class Animation
     public long ActiveSceneCurrentStep { get; set; }
     public CharacterVisual CurrentCharacterVisual { get; set; }
 
-    private Animation(string inputSymbol)
+    /// <summary>The run's visual pool; null builds every visual afresh.</summary>
+    internal VisualPool? Pool { get; }
+
+    private Animation(string inputSymbol, VisualPool? pool)
     {
+        Pool = pool;
         UseXtermColors = false;
         NoColor = false;
         ExistingColorHandling = ExistingColorHandling.Ignore;
@@ -554,10 +605,14 @@ public sealed class Animation
         InputBgColor = null;
         InputBold = false;
         ActiveSceneCurrentStep = 0;
-        CurrentCharacterVisual = CharacterVisual.Plain(inputSymbol);
+        CurrentCharacterVisual = pool is null
+            ? CharacterVisual.Plain(inputSymbol)
+            : pool.Intern(inputSymbol, new VisualParams(), false, false);
     }
 
-    public static Animation New(string inputSymbol) => new Animation(inputSymbol);
+    public static Animation New(string inputSymbol) => new Animation(inputSymbol, null);
+
+    internal static Animation New(string inputSymbol, VisualPool? pool) => new Animation(inputSymbol, pool);
 
     /// <summary>
     /// Animation.new_scene: auto-ids are stringified integers probing upward;
@@ -602,6 +657,7 @@ public sealed class Animation
         Scene scene = Scene.New(resolvedId, isLooping, sync, ease, NoColor, UseXtermColors);
         scene.PreexistingColors = preexistingColors;
         scene.PreexistingBold = preexistingBold;
+        scene.Pool = Pool;
         Scenes.Insert(resolvedId, scene);
         return resolvedId;
     }
@@ -619,19 +675,22 @@ public sealed class Animation
     }
 
     /// <summary>Animation._get_color_code.</summary>
-    public Ansi.ColorCode? GetColorCode(Color? color)
+    public Ansi.ColorCode? GetColorCode(Color? color) => ResolveColorCode(color, NoColor, UseXtermColors);
+
+    /// <summary>_get_color_code for either owner (Animation or Scene) of the settings.</summary>
+    internal static Ansi.ColorCode? ResolveColorCode(Color? color, bool noColor, bool useXtermColors)
     {
         if (color is null)
         {
             return null;
         }
 
-        if (NoColor)
+        if (noColor)
         {
             return null;
         }
 
-        if (UseXtermColors)
+        if (useXtermColors)
         {
             if (color.XtermColor is byte code)
             {
@@ -658,6 +717,16 @@ public sealed class Animation
         {
             resolvedColors = ColorPair.New(InputFgColor, InputBgColor);
             bold = InputBold;
+        }
+
+        if (Pool is VisualPool pool)
+        {
+            CurrentCharacterVisual = pool.Intern(
+                resolvedSymbol,
+                new VisualParams { Bold = bold, Colors = resolvedColors },
+                NoColor,
+                UseXtermColors);
+            return;
         }
 
         Ansi.ColorCode? fgCode = GetColorCode(resolvedColors.FgColor);
