@@ -186,14 +186,21 @@ public sealed class CharacterVisual
 }
 
 /// <summary>
-/// Every visual one run has built, deduplicated. Visuals are immutable, so
-/// characters and frames that look the same share one instance: it is
-/// formatted once, and the renderer can tell an unchanged cell by reference.
+/// The visuals one run builds, deduplicated. Visuals are immutable, so frames
+/// and characters that look the same share one instance: it is formatted once,
+/// and the renderer can tell an unchanged cell by reference.
+/// Scene frames are pooled for the run; transient appearances
+/// (<see cref="Animation.SetAppearance"/>) go through a fixed-size memo
+/// instead, so effects that keep making new colors do not accumulate them.
 /// Owned by the <see cref="Terminal"/>, so it lives exactly as long as the run.
 /// </summary>
 internal sealed class VisualPool
 {
+    private const int AppearanceSlots = 4096;
+
     private readonly Dictionary<VisualKey, CharacterVisual> _visuals = new Dictionary<VisualKey, CharacterVisual>();
+    private readonly (VisualKey Key, CharacterVisual? Visual)[] _appearances =
+        new (VisualKey, CharacterVisual?)[AppearanceSlots];
     private readonly StringBuilder _formatScratch = new StringBuilder();
 
     public int Count => _visuals.Count;
@@ -205,28 +212,45 @@ internal sealed class VisualPool
     /// </summary>
     public CharacterVisual Intern(string symbol, VisualParams p, bool noColor, bool useXtermColors)
     {
-        int flags = (p.Bold ? 1 : 0)
-            | (p.Dim ? 1 << 1 : 0)
-            | (p.Italic ? 1 << 2 : 0)
-            | (p.Underline ? 1 << 3 : 0)
-            | (p.Blink ? 1 << 4 : 0)
-            | (p.Reverse ? 1 << 5 : 0)
-            | (p.Hidden ? 1 << 6 : 0)
-            | (p.Strike ? 1 << 7 : 0)
-            | (p.Colors is not null ? 1 << 8 : 0)
-            | (noColor ? 1 << 9 : 0)
-            | (useXtermColors ? 1 << 10 : 0);
-        var key = new VisualKey(symbol, p.Colors?.FgColor, p.Colors?.BgColor, flags);
+        var key = new VisualKey(symbol, p, noColor, useXtermColors);
         if (_visuals.TryGetValue(key, out CharacterVisual? visual))
         {
             return visual;
         }
 
-        p.FgColorCode = Animation.ResolveColorCode(p.Colors?.FgColor, noColor, useXtermColors);
-        p.BgColorCode = Animation.ResolveColorCode(p.Colors?.BgColor, noColor, useXtermColors);
-        visual = new CharacterVisual(symbol, p, _formatScratch);
+        visual = Build(symbol, p, noColor, useXtermColors);
         _visuals.Add(key, visual);
         return visual;
+    }
+
+    /// <summary>
+    /// Like <see cref="Intern"/>, but a visual not already pooled is only
+    /// remembered in a direct-mapped memo slot, not kept for the run.
+    /// </summary>
+    public CharacterVisual Appearance(string symbol, VisualParams p, bool noColor, bool useXtermColors)
+    {
+        var key = new VisualKey(symbol, p, noColor, useXtermColors);
+        ref (VisualKey Key, CharacterVisual? Visual) slot =
+            ref _appearances[key.GetHashCode() & (AppearanceSlots - 1)];
+        if (slot.Visual is CharacterVisual memo && slot.Key.Equals(key))
+        {
+            return memo;
+        }
+
+        if (!_visuals.TryGetValue(key, out CharacterVisual? visual))
+        {
+            visual = Build(symbol, p, noColor, useXtermColors);
+        }
+
+        slot = (key, visual);
+        return visual;
+    }
+
+    private CharacterVisual Build(string symbol, VisualParams p, bool noColor, bool useXtermColors)
+    {
+        p.FgColorCode = Animation.ResolveColorCode(p.Colors?.FgColor, noColor, useXtermColors);
+        p.BgColorCode = Animation.ResolveColorCode(p.Colors?.BgColor, noColor, useXtermColors);
+        return new CharacterVisual(symbol, p, _formatScratch);
     }
 
     /// <summary>
@@ -234,7 +258,68 @@ internal sealed class VisualPool
     /// <see cref="Color.Equals(Color)"/> (their ColorArg), which also fixes the
     /// color codes for a given no-color / xterm setting.
     /// </summary>
-    private readonly record struct VisualKey(string Symbol, Color? Fg, Color? Bg, int Flags);
+    private readonly struct VisualKey : IEquatable<VisualKey>
+    {
+        private readonly string _symbol;
+        private readonly Color? _fg;
+        private readonly Color? _bg;
+        private readonly int _flags;
+        private readonly int _hash;
+
+        public VisualKey(string symbol, VisualParams p, bool noColor, bool useXtermColors)
+        {
+            _symbol = symbol;
+            _fg = p.Colors?.FgColor;
+            _bg = p.Colors?.BgColor;
+            _flags = (p.Bold ? 1 : 0)
+                | (p.Dim ? 1 << 1 : 0)
+                | (p.Italic ? 1 << 2 : 0)
+                | (p.Underline ? 1 << 3 : 0)
+                | (p.Blink ? 1 << 4 : 0)
+                | (p.Reverse ? 1 << 5 : 0)
+                | (p.Hidden ? 1 << 6 : 0)
+                | (p.Strike ? 1 << 7 : 0)
+                | (p.Colors is not null ? 1 << 8 : 0)
+                | (noColor ? 1 << 9 : 0)
+                | (useXtermColors ? 1 << 10 : 0);
+            // Equal colors have equal RgbColor, so hashing it agrees with
+            // Color.Equals. The strings are a symbol and six hex digits: a
+            // plain multiplicative hash beats the randomized string hash here.
+            uint hash = (uint)_flags;
+            hash = Mix(hash, symbol);
+            hash = Mix(hash, _fg?.RgbColor);
+            hash = Mix(hash, _bg?.RgbColor);
+            _hash = (int)(hash ^ (hash >> 15));
+        }
+
+        private static uint Mix(uint hash, string? text)
+        {
+            if (text is null)
+            {
+                return hash * 0x9E3779B1u;
+            }
+
+            foreach (char c in text)
+            {
+                hash = (hash ^ c) * 0x01000193u;
+            }
+
+            return hash * 0x9E3779B1u + (uint)text.Length;
+        }
+
+        public bool Equals(VisualKey other) =>
+            _hash == other._hash
+            && _flags == other._flags
+            && string.Equals(_symbol, other._symbol, StringComparison.Ordinal)
+            && SameColor(_fg, other._fg)
+            && SameColor(_bg, other._bg);
+
+        private static bool SameColor(Color? a, Color? b) => a is null ? b is null : a.Equals(b);
+
+        public override bool Equals(object? obj) => obj is VisualKey other && Equals(other);
+
+        public override int GetHashCode() => _hash;
+    }
 }
 
 /// <summary>
@@ -394,12 +479,13 @@ public sealed class Scene
     public CharacterVisual GetNextVisual()
     {
         int head = Frames[0];
-        CharacterVisual nextVisual = AllFrames[head].CharacterVisual;
-        AllFrames[head].TicksElapsed += 1;
-        if (AllFrames[head].TicksElapsed == AllFrames[head].Duration)
+        Frame frame = AllFrames[head];
+        CharacterVisual nextVisual = frame.CharacterVisual;
+        frame.TicksElapsed += 1;
+        if (frame.TicksElapsed == frame.Duration)
         {
-            AllFrames[head].TicksElapsed = 0;
-            PlayedFrames.Add(Frames[0]);
+            frame.TicksElapsed = 0;
+            PlayedFrames.Add(head);
             Frames.RemoveAt(0);
             if (IsLooping && Frames.Count == 0)
             {
@@ -742,7 +828,7 @@ public sealed class Animation
 
         if (Pool is VisualPool pool)
         {
-            CurrentCharacterVisual = pool.Intern(
+            CurrentCharacterVisual = pool.Appearance(
                 resolvedSymbol,
                 new VisualParams { Bold = bold, Colors = resolvedColors },
                 NoColor,
