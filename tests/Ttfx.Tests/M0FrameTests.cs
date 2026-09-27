@@ -143,7 +143,7 @@ internal static class M0FrameTests
 
     private static void CanvasCentreOddAdjustment()
     {
-        // canvas.rs:66-73 — floor_div(n, 2) then +1 when n is odd and > 1.
+        // floor_div(n, 2) then +1 when n is odd and > 1.
         Canvas even = Canvas.New(4, 6);
         Harness.AssertEqual("even center_row", 2L, even.CenterRow);
         Harness.AssertEqual("even center_column", 3L, even.CenterColumn);

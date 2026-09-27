@@ -6,7 +6,7 @@ using Ttfx.Utils;
 
 namespace Ttfx.Effects;
 
-/// <summary>bouncyballs, ported from effects/effect_bouncyballs.py. Transcribed from <c>effects/bouncyballs.rs</c>.</summary>
+/// <summary>bouncyballs, ported from effects/effect_bouncyballs.py.</summary>
 public sealed class BouncyBallsConfig
 {
     public List<Color> BallColors { get; set; } = new List<Color>();
@@ -23,9 +23,9 @@ public sealed class BouncyBalls : IEffect
 {
     private readonly BouncyBallsConfig _config;
     private readonly List<CharId> _pendingChars;
-    // BTreeMap in bouncyballs.rs — SortedDictionary min-key iteration matches.
+    // Ordered by key: SortedDictionary min-key iteration is the required order.
     private readonly SortedDictionary<long, List<CharId>> _groupByRow;
-    // HashMap in the reference: lookup only, iteration order is not contractual.
+    // Lookup only; iteration order is not contractual.
     private readonly Dictionary<CharId, Color> _characterFinalColorMap;
     private long _ballDelay;
 
@@ -166,7 +166,7 @@ public sealed class BouncyBalls : IEffect
             }
 
             // Coord(input column, int(canvas.top * uniform(1.0, 1.5))) — int() truncation
-            // bouncyballs.rs:187 — (canvas_top as f64 * rng.uniform(1.0, 1.5)) as i64
+            // canvas_top * uniform(1.0, 1.5), truncated toward zero
             long dropRow = PyCompat.TruncToI64(canvasTop * world.Rng.Uniform(1.0, 1.5));
             string inputCoordPath;
             {
@@ -195,7 +195,7 @@ public sealed class BouncyBalls : IEffect
             _pendingChars.Add(id);
         }
 
-        // bouncyballs.rs:215 — sort_by_key is stable; List.Sort is not
+        // stable sort required; List.Sort is not stable
         List<CharId> sortedChars = _pendingChars
             .OrderBy(id => world.Terminal.Arena[(int)id.Value].InputCoord.Row)
             .ToList();
@@ -248,7 +248,7 @@ public sealed class BouncyBalls : IEffect
                             break;
                         }
 
-                        // bouncyballs.rs:238-239 — Randint(0, pending.Count-1) then RemoveAt
+                        // Randint(0, pending.Count-1) then RemoveAt
                         int index = (int)world.Rng.Randint(0, _pendingChars.Count - 1);
                         CharId nextCharacter = _pendingChars[index];
                         _pendingChars.RemoveAt(index);

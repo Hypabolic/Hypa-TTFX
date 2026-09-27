@@ -44,7 +44,7 @@ public sealed class BinaryRepresentation
     }
 }
 
-/// <summary>binarypath, ported from effects/effect_binarypath.py. Transcribed from <c>effects/binarypath.rs</c>.</summary>
+/// <summary>binarypath, ported from effects/effect_binarypath.py.</summary>
 public sealed class BinaryPathConfig
 {
     public List<Color> FinalGradientStops { get; set; } = new List<Color>();
@@ -59,7 +59,7 @@ public sealed class BinaryPath : IEffect
 {
     private readonly BinaryPathConfig _config;
     private readonly List<BinaryRepresentation> _pendingBinaryRepresentations;
-    // HashMap in the reference: lookup only, iteration order is not contractual.
+    // Lookup only; iteration order is not contractual.
     private readonly Dictionary<CharId, ColorPair> _characterFinalColorMap;
     private bool _lastFrameProvided;
     private readonly List<BinaryRepresentation> _activeBinaryReps;
@@ -149,7 +149,7 @@ public sealed class BinaryPath : IEffect
                 inputCoord = ch.InputCoord;
             }
 
-            // binarypath.rs:159 — symbol.chars().next() as u32 → {:08b}; must use Rune.Value
+            // first scalar value of the symbol as binary digits; must use Rune.Value
             string binaryString = Unicode.SymbolToBinary(symbol);
             var binRep = new BinaryRepresentation
             {
@@ -194,7 +194,7 @@ public sealed class BinaryPath : IEffect
                 long maxRowDistance = Math.Abs(lastCoord.Row - inputCoord.Row);
                 if (lastOrientation == BinaryPathOrientation.Col && maxRowDistance > 0)
                 {
-                    // binarypath.rs:206 — min(max_row_distance, max(10, int(canvas.right * 0.2)))
+                    // min(max_row_distance, max(10, int(canvas.right * 0.2)))
                     long limit = Math.Min(
                         maxRowDistance,
                         Math.Max(10, PyCompat.TruncToI64(world.Terminal.Canvas.Right * 0.2)));
@@ -352,7 +352,7 @@ public sealed class BinaryPath : IEffect
             }
         }
 
-        // binarypath.rs:354 — int() truncation
+        // int() truncation
         _maxActiveBinaryGroups = Math.Max(
             1,
             PyCompat.TruncToI64(_config.ActiveBinaryGroups * _pendingBinaryRepresentations.Count));
@@ -367,7 +367,7 @@ public sealed class BinaryPath : IEffect
                 while (_activeBinaryReps.Count < _maxActiveBinaryGroups
                        && _pendingBinaryRepresentations.Count > 0)
                 {
-                    // binarypath.rs:366-367 — randrange(0, len) then RNG-indexed remove
+                    // randrange(0, len) then RNG-indexed remove
                     int index = (int)world.Rng.Randrange(0, _pendingBinaryRepresentations.Count);
                     BinaryRepresentation nextBinaryRep = _pendingBinaryRepresentations[index];
                     _pendingBinaryRepresentations.RemoveAt(index);
@@ -383,7 +383,7 @@ public sealed class BinaryPath : IEffect
                     {
                         if (activeRep.PendingBinaryCharacters.Count > 0)
                         {
-                            // binarypath.rs:376 — FIFO remove(0)
+                            // FIFO: take from the front
                             CharId nextChar = activeRep.PendingBinaryCharacters[0];
                             activeRep.PendingBinaryCharacters.RemoveAt(0);
                             world.ActiveCharacters.Insert(
@@ -428,7 +428,7 @@ public sealed class BinaryPath : IEffect
                 {
                     if (_finalWipeChars.Count > 0)
                     {
-                        // binarypath.rs:403 — FIFO remove(0)
+                        // FIFO: take from the front
                         List<CharId> nextGroup = _finalWipeChars[0];
                         _finalWipeChars.RemoveAt(0);
                         foreach (CharId character in nextGroup)

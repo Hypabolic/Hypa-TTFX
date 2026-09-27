@@ -5,7 +5,7 @@ using Ttfx.Utils;
 
 namespace Ttfx.Effects;
 
-/// <summary>matrix, ported from effects/effect_matrix.py. Transcribed from <c>effects/matrix.rs</c>.</summary>
+/// <summary>matrix, ported from effects/effect_matrix.py.</summary>
 public sealed class MatrixConfig
 {
     public Color HighlightColor { get; set; } = Color.FromHex("dbffdb");

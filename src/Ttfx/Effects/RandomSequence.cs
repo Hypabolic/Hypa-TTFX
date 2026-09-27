@@ -5,7 +5,7 @@ using Ttfx.Utils;
 
 namespace Ttfx.Effects;
 
-/// <summary>randomsequence, ported from effects/effect_random_sequence.py. Transcribed from <c>effects/random_sequence.rs</c>.</summary>
+/// <summary>randomsequence, ported from effects/effect_random_sequence.py.</summary>
 public sealed class RandomSequenceConfig
 {
     public double Speed { get; set; } = 0.007;
@@ -21,7 +21,7 @@ public sealed class RandomSequence : IEffect
 
     private readonly RandomSequenceConfig _config;
     private readonly List<CharId> _pendingChars;
-    // HashMap in the reference: lookup only, iteration order is not contractual.
+    // Lookup only; iteration order is not contractual.
     private readonly Dictionary<CharId, ColorPair> _characterFinalColorMap;
     private long _charactersPerTick;
 
@@ -51,7 +51,7 @@ public sealed class RandomSequence : IEffect
 
     public void Build(EngineWorld world)
     {
-        // random_sequence.rs:72 — (speed * input_len as f64) as i64 then max(..., 1)
+        // speed * input length, truncated toward zero, at least 1
         _charactersPerTick = System.Math.Max(
             PyCompat.TruncToI64(_config.Speed * world.Terminal.InputCharacters.Count),
             1);

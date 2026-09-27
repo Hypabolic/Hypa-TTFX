@@ -6,7 +6,7 @@ using Ttfx.Utils;
 
 namespace Ttfx.Effects;
 
-/// <summary>spotlights, ported from effects/effect_spotlights.py. Transcribed from <c>effects/spotlights.rs</c>.</summary>
+/// <summary>spotlights, ported from effects/effect_spotlights.py.</summary>
 public sealed class SpotlightsConfig
 {
     public double BeamWidthRatio { get; set; } = 2.0;
@@ -224,7 +224,7 @@ public sealed class Spotlights : IEffect
             ColorPair adjustedColor;
             if (distance > range * (1.0 - _config.BeamFalloff))
             {
-                // spotlights.rs:235 — .max(0.2) is f64 max
+                // .max(0.2) is f64 max
                 double brightnessFactor = PyCompat.FMax(
                     1.0 - (distance - range * (1.0 - _config.BeamFalloff)) / (range * _config.BeamFalloff),
                     0.2);
@@ -324,7 +324,7 @@ public sealed class Spotlights : IEffect
         }
 
         long smallestDimension = Math.Min(world.Terminal.Canvas.Right, world.Terminal.Canvas.Top);
-        // spotlights.rs:324 — floor then f64 min then trunc
+        // floor then f64 min then trunc
         double ranged = PyCompat.FMin(
             Math.Floor(smallestDimension / _config.BeamWidthRatio),
             smallestDimension);

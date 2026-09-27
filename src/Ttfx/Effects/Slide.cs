@@ -13,7 +13,7 @@ public enum SlideGrouping
     Diagonal,
 }
 
-/// <summary>slide, ported from effects/effect_slide.py. Transcribed from <c>effects/slide.rs</c>.</summary>
+/// <summary>slide, ported from effects/effect_slide.py.</summary>
 public sealed class SlideConfig
 {
     public double MovementSpeed { get; set; } = 0.8;
@@ -32,7 +32,7 @@ public sealed class Slide : IEffect
 {
     private readonly SlideConfig _config;
     private readonly List<List<CharId>> _pendingGroups;
-    // HashMap in the reference: lookup only, iteration order is not contractual.
+    // Lookup only; iteration order is not contractual.
     private readonly Dictionary<CharId, ColorPair> _characterFinalColorMap;
     private readonly List<List<CharId>> _activeGroups;
     private long _currentGap;
@@ -46,7 +46,7 @@ public sealed class Slide : IEffect
         _currentGap = 0;
     }
 
-    /// <summary>slide.rs parse_slide_grouping.</summary>
+    /// <summary>parse_slide_grouping.</summary>
     public static object ParseSlideGrouping(string s)
     {
         return s switch
@@ -325,7 +325,7 @@ public sealed class Slide : IEffect
         {
             if (_currentGap == _config.Gap && _pendingGroups.Count > 0)
             {
-                // slide.rs:290 — remove(0) FIFO drain
+                // FIFO drain from the front
                 _activeGroups.Add(_pendingGroups[0]);
                 _pendingGroups.RemoveAt(0);
                 _currentGap = 0;
@@ -339,7 +339,7 @@ public sealed class Slide : IEffect
             {
                 if (_activeGroups[groupIndex].Count > 0)
                 {
-                    // slide.rs:297 — remove(0) FIFO drain
+                    // FIFO drain from the front
                     CharId nextChar = _activeGroups[groupIndex][0];
                     _activeGroups[groupIndex].RemoveAt(0);
                     world.Terminal.SetCharacterVisibility(nextChar, true);

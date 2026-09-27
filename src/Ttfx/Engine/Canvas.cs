@@ -42,7 +42,6 @@ public static class AnchorParse
 
 /// <summary>
 /// Canvas, ported from engine/terminal.py Canvas.
-/// Transcribed from <c>engine/canvas.rs</c>.
 /// </summary>
 public sealed class Canvas
 {

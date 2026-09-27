@@ -298,8 +298,8 @@ public static class Hexterm
     }
 
     /// <summary>
-    /// hexterm.rs / graphics.rs parse_rgb: first six digits after trim_matches('#').
-    /// Channel parse matches <c>u8::from_str_radix</c> — optional leading <c>+</c>,
+    /// parse_rgb: first six digits after trimming '#' from both ends.
+    /// Channel parse (<see cref="ParseU8Hex"/>): optional leading <c>+</c>,
     /// reject <c>-</c>. Do not use <c>NumberStyles.AllowHexSpecifier</c> (rejects <c>+</c>).
     /// </summary>
     internal static byte[] ParseRgb(string hexColor)
@@ -314,7 +314,7 @@ public static class Hexterm
     }
 
     /// <summary>
-    /// Rust <c>u8::from_str_radix(s, 16)</c>: accept optional leading <c>+</c>,
+    /// Unsigned base-16 byte parse: accept optional leading <c>+</c>,
     /// reject <c>-</c> (unsigned), remaining chars must be hex digits, value in 0..=255.
     /// </summary>
     internal static byte ParseU8Hex(ReadOnlySpan<char> s)

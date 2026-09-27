@@ -6,7 +6,7 @@ using Ttfx.Utils;
 
 namespace Ttfx.Effects;
 
-/// <summary>print, ported from effects/effect_print.py. Transcribed from <c>effects/print_effect.rs</c>.</summary>
+/// <summary>print, ported from effects/effect_print.py.</summary>
 public sealed class PrintEffectConfig
 {
     public double PrintHeadReturnSpeed { get; set; } = 1.5;
@@ -48,7 +48,7 @@ internal sealed class PrintRow
             return null;
         }
 
-        // print_effect.rs:73 — untyped_chars.remove(0)
+        // take the first untyped character
         CharId nextChar = UntypedChars[0];
         UntypedChars.RemoveAt(0);
         TypedChars.Add(nextChar);
@@ -278,7 +278,7 @@ public sealed class PrintEffect : IEffect
             _pendingRows.Add(MakeRow(world, inputRow));
         }
 
-        // print_effect.rs:288 — pending_rows.remove(0)
+        // take the first pending row
         _currentRow = _pendingRows[0];
         _pendingRows.RemoveAt(0);
         _typing = true;
@@ -321,7 +321,7 @@ public sealed class PrintEffect : IEffect
                         row.MoveUp(world);
                     }
 
-                    // print_effect.rs:318 — pending_rows.remove(0)
+                    // take the first pending row
                     _currentRow = _pendingRows[0];
                     _pendingRows.RemoveAt(0);
 

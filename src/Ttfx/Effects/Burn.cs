@@ -5,7 +5,7 @@ using Ttfx.Utils;
 
 namespace Ttfx.Effects;
 
-/// <summary>burn, ported from effects/effect_burn.py. Transcribed from <c>effects/burn.rs</c>.</summary>
+/// <summary>burn, ported from effects/effect_burn.py.</summary>
 public sealed class BurnConfig
 {
     public Color StartingColor { get; set; } = Color.FromHex("837373");
@@ -35,13 +35,13 @@ public sealed class Burn : IEffect
     ];
 
     private readonly BurnConfig _config;
-    // HashMap in the reference: lookup only, iteration order is not contractual.
+    // Lookup only; iteration order is not contractual.
     private readonly Dictionary<CharId, Color> _characterFinalColorMap;
-    /// <summary>PrimsSimple.char_link_order, consumed FIFO in next_frame (burn.rs:367).</summary>
+    /// <summary>PrimsSimple.char_link_order, consumed FIFO in next_frame.</summary>
     private readonly List<CharId> _charLinkOrder;
     /// <summary>
-    /// Option so EmitSmoke can move the pool out of self while on_emit needs
-    /// &amp;mut self for event dispatch (see emit_smoke).
+    /// Nullable so EmitSmoke can take the pool out while on_emit dispatches
+    /// events through this effect (see emit_smoke).
     /// </summary>
     private ParticlePool? _smokeParticles;
     /// <summary>
@@ -157,7 +157,7 @@ public sealed class Burn : IEffect
                     .NewWaypoint(riseTargetCoord, null, "");
                 ctx.ActivatePath(this, nextParticle, smokePath);
                 ctx.ActivateScene(this, nextParticle, "smoke");
-                // burn.rs:178-185 — payload is emission_id at registration, not a loop capture.
+                // payload is emission_id at registration, not a loop capture.
                 ctx.RegisterEvent(
                     nextParticle,
                     Event.SceneComplete,

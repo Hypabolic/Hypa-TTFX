@@ -5,7 +5,6 @@ namespace Ttfx.Engine;
 
 /// <summary>
 /// Arena slot index (dense). Never used for ordering.
-/// Transcribed from <c>engine/character.rs</c>.
 /// </summary>
 public readonly record struct CharId(uint Value);
 

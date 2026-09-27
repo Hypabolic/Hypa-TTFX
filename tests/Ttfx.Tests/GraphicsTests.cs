@@ -53,7 +53,7 @@ internal static class GraphicsTests
         Harness.AssertEqual("graphics golden line count", expected.Length, actual.Count);
     }
 
-    /// <summary>Transcribed from ttfx tests/graphics_goldens.rs generate_lines.</summary>
+    /// <summary>The graphics golden lines, in fixture order.</summary>
     private static List<string> GenerateLines()
     {
         var lines = new List<string>();
@@ -200,7 +200,7 @@ internal static class GraphicsTests
 
     private static void LeadingPlusHex()
     {
-        // u8::from_str_radix accepts '+': "+abc12" → channels "+a","bc","12"
+        // The channel parse accepts a leading '+': "+abc12" → channels "+a","bc","12"
         Color plusSix = Color.FromHex("+abc12");
         Harness.AssertEqual("+abc12 r", (byte)0x0a, plusSix.RgbInts().R);
         Harness.AssertEqual("+abc12 g", (byte)0xbc, plusSix.RgbInts().G);

@@ -13,7 +13,6 @@ namespace Ttfx.Engine;
 
 /// <summary>
 /// Terminal: config, canvas assembly, character queries, renderer.
-/// Transcribed from <c>engine/terminal.rs</c>.
 /// </summary>
 public sealed class TerminalConfig
 {
@@ -104,7 +103,7 @@ public readonly record struct CharacterFilter(
 /// <summary>
 /// Everything about the drawing area that is derived from the terminal size.
 /// A resize only matters if recomputing this yields something different, so it
-/// is factored out of Terminal::new rather than inlined there.
+/// is factored out of the Terminal constructor rather than inlined there.
 /// </summary>
 public readonly record struct Layout(
     long CanvasHeight,
@@ -289,7 +288,7 @@ public sealed class Terminal
     }
 
     /// <summary>
-    /// EngineCtx preexisting_colors_present scan (ctx.rs:108-111): any surviving
+    /// preexisting_colors_present scan: any surviving
     /// input character carries an input fg or bg captured at parse time.
     /// </summary>
     public bool PreexistingColorsPresent()
@@ -393,7 +392,7 @@ public sealed class Terminal
         {
             int position = _visiblePositions[arenaIndex];
             _visiblePositions[arenaIndex] = NotVisible;
-            // swap_remove: swap-with-last, not a shifting RemoveAt (terminal.rs:336).
+            // Swap-with-last removal, not a shifting RemoveAt.
             int last = _visibleCharacters.Count - 1;
             _visibleCharacters[position] = _visibleCharacters[last];
             _visibleCharacters.RemoveAt(last);
@@ -503,7 +502,7 @@ public sealed class Terminal
         _outputBuffer.ResetWrittenCount();
         if (_outputBuffer.FreeCapacity < minimumCapacity)
         {
-            // Grow the recycled buffer like Rust out.reserve(minimum_capacity).
+            // Grow the recycled buffer to at least minimum_capacity.
             // GetSpan only ensures capacity; WrittenCount stays 0.
             _ = _outputBuffer.GetSpan(minimumCapacity);
         }
@@ -590,7 +589,7 @@ public sealed class Terminal
 
     /// <summary>
     /// shutil.get_terminal_size semantics: COLUMNS/LINES env vars win if both
-    /// parse as i64 (Rust grammar — no surrounding whitespace); else query the
+    /// parse as i64 (strict grammar — no surrounding whitespace); else query the
     /// tty; on failure (80, 24). Per-axis override when only one env var parses.
     /// </summary>
     public static (long Width, long Height) GetTerminalDimensions()
@@ -619,7 +618,7 @@ public sealed class Terminal
             return null;
         }
 
-        // Rust parse::<i64>() rejects surrounding whitespace.
+        // The strict grammar rejects surrounding whitespace.
         if (ValueParsers.TryParseI64(value, out long parsed))
         {
             return parsed;
@@ -963,7 +962,7 @@ public sealed class Terminal
             case CharacterSort.OutsideRowToMiddle:
             case CharacterSort.MiddleRowToOutside:
             {
-                // upstream: alternate pop(0)/pop(-1) (terminal.rs:409)
+                // upstream: alternate pop(0)/pop(-1)
                 var deque = new LinkedList<CharId>(all);
                 var interleaved = new List<CharId>(deque.Count);
                 bool fromFront = true;
@@ -1197,7 +1196,6 @@ public sealed class Terminal
     /// <summary>
     /// prep_canvas: hide cursor, optionally reposition for --reuse-canvas,
     /// scroll blank rows for the visible area, DEC save.
-    /// Transcribed from <c>engine/terminal.rs</c>.
     /// </summary>
     public void PrepCanvas(Stream output)
     {
@@ -1225,7 +1223,6 @@ public sealed class Terminal
 
     /// <summary>
     /// restore_cursor: honour --no-eol / --no-restore-cursor.
-    /// Transcribed from <c>engine/terminal.rs</c>.
     /// </summary>
     public void RestoreCursor(Stream output, string endSymbol)
     {
@@ -1253,7 +1250,6 @@ public sealed class Terminal
     /// canvas and no anchor offsets most resizes leave every rendered cell
     /// exactly where it was, and restarting for those is pure loss. Explicitly
     /// ignored dimensions are fixed by definition.
-    /// Transcribed from <c>engine/terminal.rs</c> 622-640.
     /// </summary>
     public bool ResizeSettled()
     {
@@ -1290,7 +1286,6 @@ public sealed class Terminal
     /// After a resize: go back to the top of the area this run allocated, wipe
     /// it, and leave the cursor there so the rebuilt canvas takes the same rows
     /// instead of scrolling a second one into the terminal.
-    /// Transcribed from <c>engine/terminal.rs</c> 642-652.
     /// </summary>
     public void ResetCanvasArea(Stream output)
     {
@@ -1305,7 +1300,6 @@ public sealed class Terminal
 
     /// <summary>
     /// print_frame: move_cursor_to_top + output_string bytes + flush.
-    /// Transcribed from <c>engine/terminal.rs</c>.
     /// </summary>
     public void PrintFrame(Stream output, string outputString)
     {

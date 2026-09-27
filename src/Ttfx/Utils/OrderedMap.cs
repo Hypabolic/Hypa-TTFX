@@ -7,9 +7,7 @@ namespace Ttfx.Utils;
 /// Insertion-ordered string-keyed map with Python-dict iteration semantics.
 /// Used everywhere upstream iterates dict values: motion.paths,
 /// animation.scenes, effect-level dicts.
-/// Representation half of the Rust index-threshold / pointer-equality cache is
-/// dropped; insert/overwrite/remove order is the semantic half.
-/// Transcribed from <c>utils/ordered_map.rs</c>.
+/// Insert/overwrite/remove order is the semantics that matter.
 /// </summary>
 public sealed class OrderedMap<T>
 {

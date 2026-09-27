@@ -8,7 +8,6 @@ namespace Ttfx.Engine;
 /// <summary>
 /// One effect: build() once (upstream iterator __init__/build), then
 /// next_frame() until None (upstream __next__/StopIteration).
-/// Transcribed from <c>engine/effect.rs</c>.
 /// </summary>
 public enum RunOutcome
 {
@@ -19,8 +18,7 @@ public enum RunOutcome
 }
 
 /// <summary>
-/// Effect trait run loop (base_effect.py equivalents).
-/// Transcribed from <c>engine/effect.rs</c>.
+/// Effect run loop (base_effect.py equivalents).
 /// </summary>
 public static class EffectRunner
 {

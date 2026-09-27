@@ -10,7 +10,7 @@ namespace Ttfx;
 /// <summary>
 /// Hidden-flag dumps of the easing and geometry goldens. Emitted by the
 /// AOT-published binary so assertions run under ILC, not RyuJIT.
-/// Line formats match <c>tests/easing_goldens.rs</c> / <c>geometry_goldens.rs</c>.
+/// Line formats are fixed by the easing and geometry golden fixtures.
 /// </summary>
 internal static class GoldenDumps
 {
@@ -92,7 +92,7 @@ internal static class GoldenDumps
         return 0;
     }
 
-    /// <summary>Transcribed from ttfx <c>tests/geometry_goldens.rs</c> generate_lines.</summary>
+    /// <summary>The geometry golden lines, in fixture order.</summary>
     internal static List<string> GenerateGeometryLines()
     {
         var lines = new List<string>();
@@ -137,7 +137,7 @@ internal static class GoldenDumps
             {
                 Coord c = Geometry.ExtrapolateAlongRay(origin, target, offset);
                 lines.Add(
-                    $"extrapolate {origin.Column},{origin.Row}->{target.Column},{target.Row}+{RustF64Debug(offset)}: {c.Column},{c.Row}");
+                    $"extrapolate {origin.Column},{origin.Row}->{target.Column},{target.Row}+{F64Debug(offset)}: {c.Column},{c.Row}");
             }
         }
 
@@ -220,8 +220,8 @@ internal static class GoldenDumps
         return sb.ToString();
     }
 
-    /// <summary>Rust <c>{offset:?}</c> for the golden offsets: always a decimal point.</summary>
-    private static string RustF64Debug(double x)
+    /// <summary>Debug float formatting for the golden offsets: always a decimal point.</summary>
+    private static string F64Debug(double x)
     {
         if (x == Math.Truncate(x) && !double.IsInfinity(x) && !double.IsNaN(x))
         {

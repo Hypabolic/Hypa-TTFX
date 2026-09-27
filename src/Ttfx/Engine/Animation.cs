@@ -25,9 +25,6 @@ public enum SyncMetric
 
 /// <summary>
 /// The precomputed ANSI string for one cell, stored as UTF-8 bytes.
-/// Representation half of Rust's inline/heap union is dropped;
-/// the cached byte[] is the semantic half.
-/// Transcribed from <c>engine/animation.rs</c>.
 /// </summary>
 public sealed class FormattedSymbol
 {
@@ -177,7 +174,7 @@ public sealed class CharacterVisual
         }
 
         fmt.Append(Symbol);
-        // Rust str::len() is bytes. Compare UTF-8 byte counts, not String.Length.
+        // Compare UTF-8 byte counts, not String.Length.
         if (Encoding.UTF8.GetByteCount(fmt.ToString()) != Encoding.UTF8.GetByteCount(Symbol))
         {
             fmt.Append(Ansi.ResetAll);
@@ -343,7 +340,6 @@ public sealed class Frame
 
 /// <summary>
 /// animation.Scene.
-/// Transcribed from <c>engine/animation.rs</c>.
 /// </summary>
 public sealed class Scene
 {
@@ -358,9 +354,9 @@ public sealed class Scene
     public List<Frame> AllFrames { get; } = new List<Frame>();
 
     /// <summary>
-    /// Remaining frame queue (indices into all_frames). FIFO: push_back / pop_front
-    /// (<c>animation.rs:226</c>). List so synced-scene indexing (<c>ctx.rs:613</c>)
-    /// and <c>.back()</c> (<c>ctx.rs:594</c>) work.
+    /// Remaining frame queue (indices into all_frames). FIFO: append at the back,
+    /// take from the front. A List so synced-scene indexing and last-frame
+    /// access work.
     /// </summary>
     public List<int> Frames { get; } = new List<int>();
 
@@ -515,7 +511,7 @@ public sealed class Scene
             int smallerIndex = 0;
             int currentRepeatFactor = 0;
             var output = new List<(T, R)>(larger.Count);
-            // Length captured once: cyclic_distribution does not emit (animation.rs:349).
+            // Length captured once: cyclic_distribution does not emit.
             int largerCount = larger.Count;
             for (int i = 0; i < largerCount; i++)
             {
@@ -563,7 +559,7 @@ public sealed class Scene
                 "Foreground and background gradient are empty. At least one gradient must have at least one color.");
         }
 
-        // Length captured once: symbol validation does not emit (animation.rs:382).
+        // Length captured once: symbol validation does not emit.
         int symbolCount = symbols.Count;
         for (int i = 0; i < symbolCount; i++)
         {
@@ -646,7 +642,7 @@ public sealed class Scene
         // already-played frames were zeroed when they retired.
         var remaining = new List<int>(Frames);
         Frames.Clear();
-        // Length captured once: reset does not emit (animation.rs:425).
+        // Length captured once: reset does not emit.
         int remainingCount = remaining.Count;
         for (int i = 0; i < remainingCount; i++)
         {
@@ -663,7 +659,6 @@ public sealed class Scene
 
 /// <summary>
 /// engine/animation.py Animation: per-character animation state.
-/// Transcribed from <c>engine/animation.rs</c>.
 /// </summary>
 public sealed class Animation
 {

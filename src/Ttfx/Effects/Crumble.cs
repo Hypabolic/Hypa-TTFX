@@ -15,7 +15,7 @@ public enum CrumbleStage
     Complete,
 }
 
-/// <summary>crumble, ported from effects/effect_crumble.py. Transcribed from <c>effects/crumble.rs</c>.</summary>
+/// <summary>crumble, ported from effects/effect_crumble.py.</summary>
 public sealed class CrumbleConfig
 {
     public List<Color> FinalGradientStops { get; set; } = new List<Color>();
@@ -27,7 +27,7 @@ public sealed class Crumble : IEffect
 {
     private readonly CrumbleConfig _config;
     private readonly List<CharId> _pendingChars;
-    // HashMap in the reference: lookup only, iteration order is not contractual.
+    // Lookup only; iteration order is not contractual.
     private readonly Dictionary<CharId, Color> _characterFinalColorMap;
     private long _fallDelay;
     private long _maxFallDelay;
@@ -330,7 +330,7 @@ public sealed class Crumble : IEffect
                             {
                                 if (_pendingChars.Count > 0)
                                 {
-                                    // crumble.rs:418 — FIFO remove(0); outer for still runs remaining iterations
+                                    // FIFO: take from the front; the outer loop still runs its remaining iterations
                                     CharId nextChar = _pendingChars[0];
                                     _pendingChars.RemoveAt(0);
                                     world.ActivateScene(this, nextChar, "weaken");
@@ -368,7 +368,7 @@ public sealed class Crumble : IEffect
                         {
                             if (_unvacuumedChars.Count > 0)
                             {
-                                // crumble.rs:443 — FIFO remove(0)
+                                // FIFO: take from the front
                                 CharId nextChar = _unvacuumedChars[0];
                                 _unvacuumedChars.RemoveAt(0);
                                 world.ActivatePath(this, nextChar, "top");

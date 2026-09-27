@@ -6,7 +6,6 @@ namespace Ttfx.Engine;
 
 /// <summary>
 /// ParticlePool / ParticleReset, ported from engine/effect_support/particles.py.
-/// Transcribed from <c>engine/particles.rs</c>.
 /// </summary>
 public readonly record struct ParticleReset(
     bool ClearPaths,
@@ -33,7 +32,7 @@ public sealed class ParticlePool
 
     /// <summary>
     /// Available queue: pop from the RIGHT (Python deque.pop), push right.
-    /// C# <see cref="Stack{T}"/> is LIFO (push_back + pop_back).
+    /// C# <see cref="Stack{T}"/> is LIFO (push and pop at the same end).
     /// </summary>
     public Stack<CharId> Available { get; } = new Stack<CharId>();
 

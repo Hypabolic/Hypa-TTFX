@@ -5,7 +5,7 @@ using Ttfx.Utils;
 
 namespace Ttfx.Effects;
 
-/// <summary>highlight, ported from effects/effect_highlight.py. Transcribed from <c>effects/highlight.rs</c>.</summary>
+/// <summary>highlight, ported from effects/effect_highlight.py.</summary>
 public sealed class HighlightConfig
 {
     public double HighlightBrightness { get; set; } = 1.75;

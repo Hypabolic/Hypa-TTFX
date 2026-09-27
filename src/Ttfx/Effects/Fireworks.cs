@@ -6,7 +6,7 @@ using Ttfx.Utils;
 
 namespace Ttfx.Effects;
 
-/// <summary>fireworks, ported from effects/effect_fireworks.py. Transcribed from <c>effects/fireworks.rs</c>.</summary>
+/// <summary>fireworks, ported from effects/effect_fireworks.py.</summary>
 public sealed class FireworksConfig
 {
     public bool ExplodeAnywhere { get; set; }
@@ -26,7 +26,7 @@ public sealed class Fireworks : IEffect
     private readonly List<List<CharId>> _shells;
     private long _fireworkVolume;
     private long _explodeDistance;
-    // HashMap in the reference: lookup only, iteration order is not contractual.
+    // Lookup only; iteration order is not contractual.
     private readonly Dictionary<CharId, ColorPair> _characterFinalColorMap;
     private long _launchDelay;
 
@@ -322,7 +322,7 @@ public sealed class Fireworks : IEffect
                         world.Terminal.Arena[(int)id.Value].CharacterId);
                 }
 
-                // fireworks.rs:413 — int(launch_delay * uniform(0.5, 1.5)) truncation
+                // int(launch_delay * uniform(0.5, 1.5)) truncation
                 _launchDelay = PyCompat.TruncToI64(_config.LaunchDelay * world.Rng.Uniform(0.5, 1.5));
             }
 

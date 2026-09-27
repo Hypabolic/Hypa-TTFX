@@ -25,7 +25,7 @@ public sealed class BubbleState
     public bool Landed { get; set; }
 }
 
-/// <summary>bubbles, ported from effects/effect_bubbles.py. Transcribed from <c>effects/bubbles.rs</c>.</summary>
+/// <summary>bubbles, ported from effects/effect_bubbles.py.</summary>
 public sealed class BubblesConfig
 {
     public bool Rainbow { get; set; }
@@ -46,7 +46,7 @@ public sealed class Bubbles : IEffect
     private readonly List<BubbleState> _bubbles;
     private readonly List<BubbleState> _animatingBubbles;
     private readonly Gradient _rainbowGradient;
-    // HashMap in the reference: lookup only, iteration order is not contractual.
+    // Lookup only; iteration order is not contractual.
     private readonly Dictionary<CharId, Color> _characterFinalColorMap;
     private long _stepsSinceLastBubble;
 
@@ -70,7 +70,7 @@ public sealed class Bubbles : IEffect
         _stepsSinceLastBubble = 0;
     }
 
-    /// <summary>bubbles.rs parse_pop_condition.</summary>
+    /// <summary>parse_pop_condition.</summary>
     public static object ParsePopCondition(string s)
     {
         return s switch
@@ -137,7 +137,7 @@ public sealed class Bubbles : IEffect
         long lowestRow;
         if (_config.PopCondition == PopCondition.Row)
         {
-            // bubbles.rs:156 — .min().unwrap() on empty throws
+            // min over an empty set throws
             lowestRow = characters
                 .Select(id => world.Terminal.Arena[(int)id.Value].InputCoord.Row)
                 .Min();
@@ -420,7 +420,7 @@ public sealed class Bubbles : IEffect
                 long count = world.Rng.Randint(5, Math.Min(unbubbledChars.Count, 20));
                 for (long i = 0; i < count; i++)
                 {
-                    // bubbles.rs:475 — FIFO remove(0)
+                    // FIFO: take from the front
                     CharId next = unbubbledChars[0];
                     unbubbledChars.RemoveAt(0);
                     bubbleGroup.Add(next);
@@ -444,7 +444,7 @@ public sealed class Bubbles : IEffect
         {
             if (_bubbles.Count > 0 && _stepsSinceLastBubble >= _config.BubbleDelay)
             {
-                // bubbles.rs:493 — FIFO remove(0)
+                // FIFO: take from the front
                 BubbleState nextBubble = _bubbles[0];
                 _bubbles.RemoveAt(0);
                 foreach (CharId id in nextBubble.Characters)

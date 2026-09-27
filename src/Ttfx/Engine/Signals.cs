@@ -9,7 +9,6 @@ namespace Ttfx.Engine;
 /// POSIX signal flags and registrations. Handlers run on a thread-pool thread;
 /// flags are Interlocked so the run loop cannot miss a signal under optimized
 /// AOT. Registrations are held in statics for process lifetime.
-/// Transcribed from <c>lib.rs</c>.
 /// </summary>
 public static partial class Signals
 {

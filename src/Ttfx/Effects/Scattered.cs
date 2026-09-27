@@ -5,7 +5,7 @@ using Ttfx.Utils;
 
 namespace Ttfx.Effects;
 
-/// <summary>scattered, ported from effects/effect_scattered.py. Transcribed from <c>effects/scattered.rs</c>.</summary>
+/// <summary>scattered, ported from effects/effect_scattered.py.</summary>
 public sealed class ScatteredConfig
 {
     public double MovementSpeed { get; set; } = 0.5;
@@ -20,7 +20,7 @@ public sealed class Scattered : IEffect
 {
     private readonly ScatteredConfig _config;
     private readonly List<CharId> _pendingChars;
-    // HashMap in the reference: lookup only, iteration order is not contractual.
+    // Lookup only; iteration order is not contractual.
     private readonly Dictionary<CharId, ColorPair> _characterFinalColorMap;
     private long _initialHoldFrames;
 

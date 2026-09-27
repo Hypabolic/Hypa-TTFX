@@ -7,11 +7,10 @@ namespace Ttfx.Tests;
 
 /// <summary>
 /// Engine state-machine traces vs the reference fixture
-/// (tests/Ttfx.Tests/fixtures/engine_traces.txt). Scenarios transcribed from
-/// <c>tests/engine_traces.rs</c> are reference-verified. The path-reactivation
-/// and scene-overwrite scenarios at the end of the fixture are C# self-consistency
-/// checks only — they have no Rust counterpart in engine_traces.rs; they guard
-/// rebase/overwrite behavior transcribed from ctx.rs but are not oracle-verified.
+/// (tests/Ttfx.Tests/fixtures/engine_traces.txt). Most scenarios are
+/// reference-verified. The path-reactivation and scene-overwrite scenarios at
+/// the end of the fixture are C# self-consistency checks only; they guard
+/// rebase/overwrite behavior but are not oracle-verified.
 /// </summary>
 internal static class EngineTraces
 {
@@ -321,8 +320,8 @@ internal static class EngineTraces
     }
 
     /// <summary>
-    /// Self-consistency only (no Rust engine_traces.rs scenario). Exercises
-    /// path re-activation rebase from EngineWorld.ActivatePath / ctx.rs.
+    /// Self-consistency only (no reference scenario). Exercises
+    /// path re-activation rebase from EngineWorld.ActivatePath.
     /// </summary>
     private static void ScenarioPathReactivation(List<string> log)
     {
@@ -344,7 +343,7 @@ internal static class EngineTraces
     }
 
     /// <summary>
-    /// Self-consistency only (no Rust engine_traces.rs scenario). Exercises
+    /// Self-consistency only (no reference scenario). Exercises
     /// Animation.NewScene silent overwrite (faithful to upstream).
     /// </summary>
     private static void ScenarioSceneOverwrite(List<string> log)

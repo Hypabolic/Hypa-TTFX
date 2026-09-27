@@ -5,7 +5,7 @@ using Ttfx.Utils;
 
 namespace Ttfx.Effects;
 
-/// <summary>sweep, ported from effects/effect_sweep.py. Transcribed from <c>effects/sweep.rs</c>.</summary>
+/// <summary>sweep, ported from effects/effect_sweep.py.</summary>
 public sealed class SweepConfig
 {
     public List<string> SweepSymbols { get; set; } = new List<string>();

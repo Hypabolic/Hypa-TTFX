@@ -17,7 +17,7 @@ public enum EtchPatternKind
 
 public readonly record struct EtchPattern(EtchPatternKind Kind, CharacterGroup Group = default);
 
-/// <summary>laseretch, ported from effects/effect_laseretch.py. Transcribed from <c>effects/laseretch.rs</c>.</summary>
+/// <summary>laseretch, ported from effects/effect_laseretch.py.</summary>
 public sealed class LaserEtchConfig
 {
     public EtchPattern EtchPattern { get; set; } = new EtchPattern(EtchPatternKind.Algorithm);
@@ -48,7 +48,7 @@ public sealed class LaserEtch : IEffect
     private const uint CbReclaimSpark = 0;
 
     private readonly LaserEtchConfig _config;
-    // HashMap in the reference: lookup only, iteration order is not contractual.
+    // Lookup only; iteration order is not contractual.
     private readonly Dictionary<CharId, ColorPair> _characterFinalColorMap;
     private readonly List<CharId> _pendingChars;
     private long _charDelay;
@@ -63,7 +63,7 @@ public sealed class LaserEtch : IEffect
         _laser = null;
     }
 
-    /// <summary>laseretch.rs parse_etch_pattern.</summary>
+    /// <summary>parse_etch_pattern.</summary>
     public static object ParseEtchPattern(string s)
     {
         if (s == "algorithm")
@@ -125,7 +125,7 @@ public sealed class LaserEtch : IEffect
     /// <summary>Laser.__init__ (+ _make_sparks_pool).</summary>
     private LaserState MakeLaser(EngineWorld world)
     {
-        // laseretch.rs:166 — VecDeque rotation via pop_front/push_back.
+        // Deque rotation: take from the front, append to the back.
         List<Color> laserGradient = Gradient.New(_config.LaserGradientStops, [6], true, true).Spectrum;
         Gradient sparkGradient = Gradient.New(_config.SparkGradientStops, [3, 8], false, false);
         List<Color> sparkColors = sparkGradient.Spectrum;
@@ -174,7 +174,7 @@ public sealed class LaserEtch : IEffect
                 }
             }
 
-            // laseretch.rs:225-226 — deque.rotate(-1)
+            // deque.rotate(-1)
             if (laserGradient.Count > 0)
             {
                 Color front = laserGradient[0];

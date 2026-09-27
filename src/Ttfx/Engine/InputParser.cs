@@ -57,7 +57,6 @@ internal sealed class ActiveState
 /// wcwidth upstream), tracking SGR color state and cursor movement, producing
 /// rows of arena character ids. Everything here, including which malformed
 /// sequences error vs. get silently ignored, transcribes terminal.py:604-862.
-/// Transcribed from <c>engine/input.rs</c>.
 /// </summary>
 public sealed class Preprocessor
 {
@@ -84,7 +83,7 @@ public sealed class Preprocessor
     /// <summary>Returns rows of character ids (top row first, as parsed).</summary>
     public List<List<CharId>> Preprocess(string inputData)
     {
-        // input.rs:51 chars().collect() → Rune[]; one rune = one cell
+        // Input as Rune[]; one rune = one cell
         var chars = new List<Rune>();
         foreach (Rune rune in inputData.EnumerateRunes())
         {
@@ -457,7 +456,7 @@ public sealed class Preprocessor
     {
         foreach (Rune c in parameters.EnumerateRunes())
         {
-            // Rust char::is_ascii_digit — not Rune.IsDigit (Unicode digits).
+            // ASCII digits only — not Rune.IsDigit (Unicode digits).
             bool asciiDigit = c.Value >= '0' && c.Value <= '9';
             if (!asciiDigit && c.Value != ';')
             {

@@ -19,7 +19,7 @@ public enum SprayPosition
     Center,
 }
 
-/// <summary>spray, ported from effects/effect_spray.py. Transcribed from <c>effects/spray.rs</c>.</summary>
+/// <summary>spray, ported from effects/effect_spray.py.</summary>
 public sealed class SprayConfig
 {
     public SprayPosition SprayPosition { get; set; } = SprayPosition.E;
@@ -35,7 +35,7 @@ public sealed class Spray : IEffect
 {
     private readonly SprayConfig _config;
     private readonly List<CharId> _pendingChars;
-    // HashMap in the reference: lookup only, iteration order is not contractual.
+    // Lookup only; iteration order is not contractual.
     private readonly Dictionary<CharId, ColorPair> _characterFinalColorMap;
     private long _volume;
 
@@ -47,7 +47,7 @@ public sealed class Spray : IEffect
         _volume = 1;
     }
 
-    /// <summary>spray.rs parse_spray_position.</summary>
+    /// <summary>parse_spray_position.</summary>
     public static object ParseSprayPosition(string s)
     {
         return s switch
@@ -223,7 +223,7 @@ public sealed class Spray : IEffect
         }
 
         world.Rng.Shuffle(_pendingChars);
-        // spray.rs:222 — (pending.len() as f64 * spray_volume) as i64 then max(..., 1)
+        // pending count * spray_volume, truncated toward zero, at least 1
         _volume = System.Math.Max(
             PyCompat.TruncToI64(_pendingChars.Count * _config.SprayVolume),
             1);

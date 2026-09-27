@@ -13,7 +13,7 @@ public enum DecryptPhase
     Decrypting,
 }
 
-/// <summary>decrypt, ported from effects/effect_decrypt.py. Transcribed from <c>effects/decrypt.rs</c>.</summary>
+/// <summary>decrypt, ported from effects/effect_decrypt.py.</summary>
 public sealed class DecryptConfig
 {
     public long TypingSpeed { get; set; } = 2;
@@ -27,11 +27,11 @@ public sealed class Decrypt : IEffect
 {
     private readonly DecryptConfig _config;
     private readonly List<CharId> _typingPendingChars;
-    /// <summary>Upstream is a set; membership only feeds active_characters (decrypt.rs:53-54).</summary>
+    /// <summary>Upstream is a set; membership only feeds active_characters.</summary>
     private readonly List<CharId> _decryptingPendingChars;
     private DecryptPhase _phase;
     private readonly List<string> _encryptedSymbols;
-    // HashMap in the reference: lookup only, iteration order is not contractual.
+    // Lookup only; iteration order is not contractual.
     private readonly Dictionary<CharId, ColorPair> _characterFinalColorMap;
 
     public Decrypt(DecryptConfig config)
@@ -291,7 +291,7 @@ public sealed class Decrypt : IEffect
                     {
                         if (_typingPendingChars.Count > 0)
                         {
-                            // decrypt.rs:334 — FIFO remove(0)
+                            // FIFO: take from the front
                             CharId nextCharacter = _typingPendingChars[0];
                             _typingPendingChars.RemoveAt(0);
                             world.Terminal.SetCharacterVisibility(nextCharacter, true);

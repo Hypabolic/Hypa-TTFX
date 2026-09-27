@@ -5,7 +5,7 @@ using Ttfx.Utils;
 
 namespace Ttfx.Effects;
 
-/// <summary>errorcorrect, ported from effects/effect_errorcorrect.py. Transcribed from <c>effects/errorcorrect.rs</c>.</summary>
+/// <summary>errorcorrect, ported from effects/effect_errorcorrect.py.</summary>
 public sealed class ErrorCorrectConfig
 {
     public double ErrorPairs { get; set; } = 0.1;
@@ -26,7 +26,7 @@ public sealed class ErrorCorrect : IEffect
     private readonly ErrorCorrectConfig _config;
     private readonly List<(CharId Char1, CharId Char2)> _swapped;
     private long _swapDelay;
-    // HashMap in the reference: lookup only, iteration order is not contractual.
+    // Lookup only; iteration order is not contractual.
     private readonly Dictionary<CharId, ColorPair> _characterFinalColorMap;
 
     public ErrorCorrect(ErrorCorrectConfig config)
@@ -356,7 +356,7 @@ public sealed class ErrorCorrect : IEffect
             10,
             false);
 
-        // errorcorrect.rs:381 — (error_pairs * characters.len() as f64) as i64
+        // error_pairs * character count, truncated toward zero
         long pairCount = PyCompat.TruncToI64(_config.ErrorPairs * characters.Count);
         for (long n = 0; n < pairCount; n++)
         {
@@ -365,7 +365,7 @@ public sealed class ErrorCorrect : IEffect
                 break;
             }
 
-            // errorcorrect.rs:386-389 — two RNG-indexed removals in sequence;
+            // two RNG-indexed removals in sequence;
             // the list shrinks between draws, so the second range depends on the first RemoveAt.
             int index1 = (int)world.Rng.Randrange(0, allCharacters.Count);
             CharId char1 = allCharacters[index1];
@@ -418,7 +418,7 @@ public sealed class ErrorCorrect : IEffect
     {
         if (_swapped.Count > 0 && _swapDelay == 0)
         {
-            // errorcorrect.rs:430 — remove(0) FIFO, not pop last
+            // FIFO from the front, not pop last
             (CharId char1, CharId char2) = _swapped[0];
             _swapped.RemoveAt(0);
             foreach (CharId id in new[] { char1, char2 })

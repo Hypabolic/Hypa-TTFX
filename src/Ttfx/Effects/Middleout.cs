@@ -13,7 +13,7 @@ public enum ExpandDirection
 }
 
 /// <summary>
-/// middleout, ported from effects/effect_middleout.py. Transcribed from <c>effects/middleout.rs</c>.
+/// middleout, ported from effects/effect_middleout.py.
 ///
 /// Ordering note: upstream's __next__ iterates the freshly rebuilt
 /// active_characters set (effect_middleout.py:229-232) to activate the
@@ -42,7 +42,7 @@ public sealed class Middleout : IEffect
     }
 
     private readonly MiddleoutConfig _config;
-    // HashMap in the reference: lookup only, iteration order is not contractual.
+    // Lookup only; iteration order is not contractual.
     private readonly Dictionary<CharId, ColorPair> _characterFinalColorMap;
     private Phase _phase;
 
@@ -53,7 +53,7 @@ public sealed class Middleout : IEffect
         _phase = Phase.Center;
     }
 
-    /// <summary>middleout.rs parse_expand_direction.</summary>
+    /// <summary>parse_expand_direction.</summary>
     public static object ParseExpandDirection(string s)
     {
         return s switch
@@ -266,7 +266,7 @@ public sealed class Middleout : IEffect
                     world.Terminal.Arena[(int)id.Value].CharacterId);
             }
 
-            // middleout.rs:251-256 — upstream iterates the rebuilt set here;
+            // upstream iterates the rebuilt set here;
             // canonical order is ascending CharacterId (docs/ordering-inventory.md).
             // Snapshot() is that order (not arena index, not Dictionary order).
             foreach (CharId id in world.ActiveCharacters.Snapshot())

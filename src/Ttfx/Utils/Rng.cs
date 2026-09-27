@@ -16,7 +16,6 @@ namespace Ttfx.Utils;
 /// <c>random</c> module with them, so both implementations draw identical
 /// sequences given the same seed. Do not change any helper's
 /// algorithm without updating the shim in lockstep.
-/// Transcribed from <c>utils/rng.rs</c>.
 /// </summary>
 public sealed class Rng
 {
@@ -48,7 +47,7 @@ public sealed class Rng
     {
         Span<byte> buf = stackalloc byte[8];
         // Unseeded runs are not compared. RandomNumberGenerator.Fill is BCL,
-        // AOT-clean, and stands in for Rust's /dev/urandom read.
+        // AOT-clean, and reads the OS entropy source.
         RandomNumberGenerator.Fill(buf);
         return Seeded(BinaryPrimitives.ReadUInt64LittleEndian(buf));
     }

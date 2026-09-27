@@ -11,7 +11,6 @@ namespace Ttfx.Engine;
 /// A packed bitmap over <c>CharacterId</c>: set bits iterate in ascending id
 /// order with no tree nodes to allocate or chase, and membership by arena
 /// slot is an array read.
-/// Transcribed from <c>engine/active_characters.rs</c>.
 /// </summary>
 public sealed class ActiveCharacters
 {
@@ -85,7 +84,7 @@ public sealed class ActiveCharacters
     }
 
     /// <summary>
-    /// Snapshot taken before the walk (<c>ctx.rs:682-687</c>): ascending
+    /// Snapshot taken before the walk: ascending
     /// CharacterId order, then tick the copy so emissions can mutate membership.
     /// </summary>
     public CharId[] Snapshot()
@@ -125,8 +124,8 @@ public sealed class ActiveCharacters
     }
 
     /// <summary>
-    /// Retains elements in the same ascending CharacterId order in which
-    /// <c>BTreeSet</c> invokes its predicate.
+    /// Retains elements, calling <paramref name="keep"/> in ascending
+    /// CharacterId order.
     /// </summary>
     public void Retain(Func<CharId, bool> keep)
     {
